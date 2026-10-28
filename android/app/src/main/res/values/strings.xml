@@ -1,0 +1,8 @@
+<resources>
+    <string name="block_title">Not right now.</string>
+    <string name="block_description">Instagram is blocked while the prototype service is enabled. No schedule or emergency access is configured.</string>
+    <string name="go_home">Go Home</string>
+    <string name="accessibility_settings">Accessibility settings</string>
+    <string name="accessibility_description">Morning Blocker uses accessibility window and package information to identify Instagram and display a blocking screen. It does not read message text, store screen content, or transmit data. This prototype blocks whenever enabled. Disable it here at any time.</string>
+    <string name="app_name">Morning Blocker</string>
+</resources>
