@@ -10,12 +10,15 @@ class ForegroundGate(private val surface: BlockingSurface) {
     var isBlocking = false
         private set
 
-    fun onForegroundApp(packageName: String?) {
-        if (packageName.isNullOrBlank()) return
-        if (packageName == "com.instagram.android") {
+    /** False means the snapshot or presentation is unresolved and may need retrying. */
+    fun onForegroundApp(packageName: String?): Boolean {
+        if (packageName.isNullOrBlank()) return false
+        return if (packageName == "com.instagram.android") {
             if (!isBlocking) isBlocking = surface.show()
+            isBlocking
         } else {
             close()
+            true
         }
     }
 

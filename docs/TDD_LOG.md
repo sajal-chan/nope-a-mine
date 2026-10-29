@@ -21,3 +21,13 @@ Environment: React Native 0.84.1, React 19.2.3, TypeScript, JDK 17, SDK/Build To
 Final Jest run: two suites, nine tests, zero failures. Native JUnit XML reports: three suites, eleven tests, zero failures/errors/skips. The standalone APK is generated at `android/app/build/outputs/apk/release/app-release.apk` and intentionally remains ignored by Git.
 
 Physical Samsung validation is pending; `adb devices -l` listed no attached device. Robolectric simulates Android APIs and cannot establish actual foreground detection, touch interception, OEM lifecycle reliability, or runtime React Native bridge behavior on the phone. The device matrix in `PHASE_1_TESTING.md` remains open. Scheduling and emergency access have not been started.
+
+### Phase 1 follow-up — transient failure recovery (2026-10-28)
+
+Inspection found that the original service made one delayed check and stopped if foreground identification or overlay presentation was still unavailable. Recovery then depended on a new Android event.
+
+1. **Red:** added seven service regression tests before changing production code. The service suite executed nine tests, with four assertion failures: late foreground snapshot, temporary presentation failure, temporary read failure, and multiple bounded recovery attempts. Existing behavior already passed navigation cleanup, unbind cancellation, and interrupt handling checks.
+2. **Green:** the gate now reports whether an observation is resolved. The service retries unresolved observations/presentation with delays of 100, 250, 500, and 1,000 ms, stopping after the budget is exhausted. A new relevant event or service connection starts a fresh budget. Existing 250 ms monitoring continues while an overlay is displayed. Recovered detection errors are cleared without discarding unrelated native errors.
+3. **Verification:** the full native suite passed all eighteen tests: six gate, three overlay, and nine service tests, with zero failures/errors/skips. The standalone ARM64 APK rebuild and release vital lint checks passed.
+
+No JavaScript behavior or dependencies changed. Physical-device testing remains pending; these tests simulate lifecycle and timing through Robolectric and a fake foreground reader/presentation surface.

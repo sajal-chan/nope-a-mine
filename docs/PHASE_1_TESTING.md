@@ -6,6 +6,8 @@ No physical Android device was connected during initial environment inspection. 
 
 Local checks on 2026-10-28: nine Jest tests and eleven native JUnit/Robolectric tests passed; TypeScript, ESLint, standalone ARM64 release build, release vital lint, and APK signature verification passed. See [TDD record](TDD_LOG.md). The APK uses the public debug signing key for local testing.
 
+Follow-up recovery checks: the native suite now contains eighteen passing tests. Missing foreground snapshots, temporary foreground-read exceptions, and failed presentation attempts receive bounded delayed retries. This improves recovery in simulated tests; device interruption remains unvalidated.
+
 ## Setup
 
 1. Record exact phone model, Android version, One UI version, Instagram version, and build/commit under test. Find OS details in Settings → About phone → Software information.
@@ -56,6 +58,7 @@ The setup screen includes native status and a manual refresh. Report whether per
 - This prototype cannot disable Instagram's package or guarantee an unbreakable restriction. Users retain settings, revocation, and uninstallation.
 - Foreground identification and overlay presentation have a race; exposure before interruption must be measured.
 - Window/package metadata may be missing or delayed. An unknown window does not automatically dismiss an existing overlay; Home and accessibility settings provide exit paths. Test for stuck overlays.
+- Unresolved detection/presentation receives four delayed attempts over approximately 1.85 seconds, then waits for another relevant Android event. While blocking, foreground checks continue every 250 ms. These are recovery intervals, not guarantees about Android event delivery or blocking latency.
 - The blocking surface covers the app area while retaining system navigation. Multi-window and OEM-specific surfaces require device validation.
 - Accessibility permits system-managed service operation, but reconnect after process death, reboot, or battery management varies. There is no boot receiver or persistent scheduling in Phase 1.
 - Service connection status is not a certification of reliable enforcement. Presentation errors must be reported.

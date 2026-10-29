@@ -12,11 +12,19 @@ import android.view.accessibility.AccessibilityWindowInfo
 open class AppMonitorService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
     private var gate: ForegroundGate? = null
+    private val recoveryDelays = longArrayOf(100, 250, 500, 1_000)
+    private var nextRecoveryDelay = 0
+    private var foregroundError: String? = null
     private val refresh = object : Runnable {
         override fun run() {
-            evaluateForeground()
+            if (gate == null) return
+            val resolved = evaluateForeground()
             // Recheck while covering an app so navigation cannot leave a stale overlay.
-            if (gate?.isBlocking == true) handler.postDelayed(this, 250)
+            if (gate?.isBlocking == true) {
+                handler.postDelayed(this, 250)
+            } else if (!resolved) {
+                scheduleRecovery()
+            }
         }
     }
 
@@ -26,6 +34,7 @@ open class AppMonitorService : AccessibilityService() {
         gate = ForegroundGate(createSurface())
         EnforcementStatus.connected = true
         EnforcementStatus.error = null
+        foregroundError = null
         Log.i("MorningBlocker", "Accessibility service connected")
         evaluateForeground()
         scheduleRefresh()
@@ -70,19 +79,34 @@ open class AppMonitorService : AccessibilityService() {
 
     private fun scheduleRefresh() {
         handler.removeCallbacks(refresh)
-        handler.postDelayed(refresh, 100)
+        nextRecoveryDelay = 0
+        scheduleRecovery()
     }
 
-    private fun evaluateForeground() {
-        val current = gate ?: return
-        try {
-            current.onForegroundApp(readForegroundPackage())
+    private fun scheduleRecovery() {
+        if (nextRecoveryDelay < recoveryDelays.size) {
+            handler.postDelayed(refresh, recoveryDelays[nextRecoveryDelay++])
+        }
+    }
+
+    private fun evaluateForeground(): Boolean {
+        val current = gate ?: return false
+        return try {
+            val resolved = current.onForegroundApp(readForegroundPackage())
             EnforcementStatus.blocking = current.isBlocking
+            if (resolved) {
+                // Clear only our recovered detection error, preserving Home/settings/presentation errors.
+                if (EnforcementStatus.error == foregroundError) EnforcementStatus.error = null
+                foregroundError = null
+            }
+            resolved
         } catch (error: RuntimeException) {
             current.close()
             EnforcementStatus.blocking = false
-            EnforcementStatus.error = "Foreground detection unavailable: ${error.javaClass.simpleName}"
+            foregroundError = "Foreground detection unavailable: ${error.javaClass.simpleName}"
+            EnforcementStatus.error = foregroundError
             Log.e("MorningBlocker", "Foreground detection failed", error)
+            false
         }
     }
 
