@@ -9,13 +9,14 @@ This repository builds an Android-first, offline morning social-media blocker fo
 - Stack: React Native 0.84.1, React 19.2.3, TypeScript, Kotlin, Android SDK 36, JDK 17. Android-only scaffold; no iOS deliverable.
 - Commands: `npm test -- --runInBand`, `npm run typecheck`, `npm run lint`; native checks from `android`: `./gradlew :app:testDebugUnitTest :app:assembleDebug` (Windows: `gradlew.bat`). Use Node 22.13+ on the Node 22 line.
 - **User requirement: follow TDD for all development.** Write a failing behavior test, run it to establish red, implement to green, then refactor. For scaffolding/documentation use appropriate build/static/manual checks. Record red/green evidence in `docs/TDD_LOG.md`. Do not introduce application behavior first and retrofit tests.
+- **Work one subtask at a time.** Explain the cases being tested before development, report red/green results, and make a local commit for each completed subtask. Do not push unless requested.
 - Product specification: [docs/PRODUCT_SPEC.md](docs/PRODUCT_SPEC.md).
 
 ## Immediate priority
 
 The first deliverable is a minimal React Native TypeScript application with native Kotlin code that detects Instagram (`com.instagram.android`) entering the foreground and interrupts interaction on a physical Android device, including when the React Native UI is closed.
 
-Implement Phase 1 before scheduling, emergency overrides, history, or a polished UI. Explain the chosen Android APIs, permissions, and limitations. Supply installation, permission setup, and repeatable physical-device test instructions. Record observed reliability problems. A successful build or one displayed overlay does not establish reliable enforcement. Do not claim physical-device validation without performing it.
+Physical Phase 1 testing is pending. The user authorized independently tested schedule rules while device testing is deferred. Complete the device-validation milestone before integrating scheduling into enforcement; emergency overrides, history, and polished UI remain later phases. Explain the chosen Android APIs, permissions, and limitations. Supply installation, permission setup, and repeatable physical-device test instructions. Record observed reliability problems. A successful build or one displayed overlay does not establish reliable enforcement. Do not claim physical-device validation without performing it.
 
 ## Architecture
 

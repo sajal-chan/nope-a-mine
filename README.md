@@ -4,6 +4,8 @@ Android-only React Native / Kotlin proof of concept for interrupting Instagram. 
 
 **Prototype behavior:** Instagram is blocked whenever the accessibility service is enabled. There is no schedule, emergency access, app selection, history, or backend yet. Disable the service in Android accessibility settings to stop the prototype.
 
+Pure Kotlin schedule rules are available for future integration: selected weekdays, same-day start/end boundaries, and next-session calculation. They do not yet change the installed prototype's behavior. Persistence, active-session freezing, time-zone/clock recovery, and enforcement integration are separate subtasks.
+
 ## Development
 
 - Node 22.13 or newer on the Node 22 line, npm, JDK 17.
@@ -37,6 +39,7 @@ The release build currently uses the template's public debug key **for local tes
 - `src/screens/SetupScreen.tsx`: disclosure, explicit agreement, Android settings, native status.
 - `src/native/BlockingModule.ts`: typed native bridge.
 - `android/app/src/main/java/com/morningblocker/blocking/`: native service, presentation, policy gate, and bridge.
+- `android/app/src/main/java/com/morningblocker/scheduling/`: immutable schedule configuration and pure local-time rules, with the current time supplied by the caller.
 - `android/app/src/test/`: Kotlin policy, presentation, and service tests.
 - `__tests__/`: setup-screen behavior tests.
 - [Physical-device testing and limitations](docs/PHASE_1_TESTING.md).
@@ -44,6 +47,8 @@ The release build currently uses the template's public debug key **for local tes
 - [TDD evidence](docs/TDD_LOG.md).
 
 ## Design references
+
+The schedule rules use `java.time` with [Android core library desugaring](https://developer.android.com/studio/write/java8-support#library-desugaring) to retain minimum API 24 compatibility. Start is inclusive, end is exclusive, and empty weekdays disable the schedule. “Next session” is the next strictly future start, excluding an active session. These local-time calculations do not define DST/zone-change handling or freeze an active session; those belong to later recovery/session work.
 
 The prototype uses [AccessibilityService](https://developer.android.com/reference/android/accessibilityservice/AccessibilityService) and [TYPE_ACCESSIBILITY_OVERLAY](https://developer.android.com/reference/android/view/WindowManager.LayoutParams#TYPE_ACCESSIBILITY_OVERLAY). It does not request usage access, broad package visibility, or application-overlay permission. Accessibility-window retrieval is used only to identify the foreground package; no node text is traversed, stored, or transmitted.
 

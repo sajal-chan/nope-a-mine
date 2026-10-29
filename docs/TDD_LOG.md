@@ -31,3 +31,24 @@ Inspection found that the original service made one delayed check and stopped if
 3. **Verification:** the full native suite passed all eighteen tests: six gate, three overlay, and nine service tests, with zero failures/errors/skips. The standalone ARM64 APK rebuild and release vital lint checks passed.
 
 No JavaScript behavior or dependencies changed. Physical-device testing remains pending; these tests simulate lifecycle and timing through Robolectric and a fake foreground reader/presentation surface.
+
+## Phase 2, subtask 1 — pure schedule rules (2026-10-29)
+
+The user authorized isolated schedule-rule development while Samsung validation is deferred, with cases explained before development and a local commit for each completed subtask. The rules are not connected to the accessibility service or React Native bridge.
+
+Cases covered by twenty-one tests:
+
+- Inclusive start, active interior, immediately before end, exclusive end, immediately before start, and after end.
+- Unselected weekdays; each of the seven weekdays independently; empty weekdays disabling active and upcoming sessions.
+- Rejecting equal times and overnight windows; allowing a valid window to start at midnight.
+- Next session before today's start, exactly at start, during a current session, at end, and after end on a daily schedule.
+- Choosing the closest eligible weekday irrespective of set order; next-week/month and year rollover.
+- Copying the caller's mutable weekday set so later input mutation cannot change the schedule.
+
+**Red:** all twenty-one tests executed against compileable stubs. Sixteen assertion failures established missing boundary evaluation, validation, upcoming-session calculation, and defensive copying. Five inactive-result cases already passed against null-returning stubs.
+
+**Green:** implemented immutable `MorningSchedule`, `ScheduledSession`, and stateless `ScheduleRules`. The caller supplies local date/time, so tests do not depend on the system clock. Active windows are `[start, end)`; `nextSession` excludes any start at or before now. Empty weekdays return no session. Date calculations use `java.time`, with Android core library desugaring enabled for minimum API 24 compatibility.
+
+**Regression check:** all thirty-nine native tests passed (twenty-one schedule tests plus the existing eighteen blocker tests), with zero failures/errors/skips. `:app:lintDebug` completed with zero errors and sixteen warnings concerning existing resources/manifest configuration and a test-dependency update notice; none refer to the scheduling sources. `:app:assembleDebug` passed for ARM64, including core-library desugaring. No JavaScript behavior changed, so the JavaScript suite was not rerun for this native-only subtask.
+
+Persistence, package selection storage, active-session policy freezing, enforcement integration, clock/time-zone/DST recovery, and device validation remain separate work. This subtask makes no claim that real-device blocking is reliable or schedule-driven.
