@@ -6,16 +6,11 @@ import androidx.datastore.preferences.core.*
 import com.morningblocker.scheduling.MorningSchedule
 import com.morningblocker.scheduling.RestrictionSession
 import com.morningblocker.scheduling.ClockReading
-import com.morningblocker.scheduling.SessionClock
-import com.morningblocker.scheduling.SessionClockState
-import com.morningblocker.scheduling.ZonedSessionWindow
+import com.morningblocker.scheduling.ScheduleRules
 import java.io.IOException
 import java.time.DayOfWeek
 import java.time.LocalTime
 import java.time.LocalDate
-import java.time.Duration
-import java.time.Instant
-import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -33,7 +28,12 @@ class PolicyRepository(private val store: DataStore<Preferences>) {
             writeSnapshot(preferences, resolved)
         }
         val state = decodeState(updated)
-        return state.session?.takeIf { state.clock?.completed == false }
+        val local = now.instant.atZone(now.zone).toLocalDateTime()
+        val frozen = state.session ?: return null
+        if (local.toLocalDate().isAfter(frozen.date)) return null
+        // Re-entry after a clock rollback uses the same frozen policy, not pending edits.
+        if (ScheduleRules.activeSession(frozen.policy.schedule, local) == null) return null
+        return RestrictionSession(local.toLocalDate(), frozen.policy)
     }
 
     suspend fun save(policy: BlockingPolicy, now: ClockReading) {
@@ -41,8 +41,8 @@ class PolicyRepository(private val store: DataStore<Preferences>) {
             // Capture the old policy first, even if this edit is the first operation in its window.
             val state = recoverState(decodeState(preferences), now)
             val today = now.instant.atZone(now.zone).toLocalDate()
-            val protectedDate = state.session?.date?.takeIf { state.clock?.completed == false || !it.isBefore(today) }
-            val effectiveFrom = protectedDate?.let { maxOf(it, today).plusDays(1) } ?: today
+            val protectedDate = state.session?.date?.takeIf { !it.isBefore(today) }
+            val effectiveFrom = protectedDate?.plusDays(1) ?: today
             preferences[SCHEMA] = CURRENT_SCHEMA
             writePolicy(preferences, ROOT, policy)
             preferences[EFFECTIVE_FROM] = effectiveFrom.toString()
@@ -54,31 +54,19 @@ class PolicyRepository(private val store: DataStore<Preferences>) {
         val policy: BlockingPolicy?,
         val effectiveFrom: LocalDate = LocalDate.MIN,
         val session: RestrictionSession? = null,
-        val clock: SessionClockState? = null,
     )
 
     private fun recoverState(saved: SavedState, now: ClockReading): SavedState {
-        val today = now.instant.atZone(now.zone).toLocalDate()
-        var state = saved
-        if (state.session != null) {
-            val session = state.session
-            val clock = state.clock?.let { SessionClock.recover(it, now) } ?: run {
-                // Legacy local-time snapshots lack a historical zone/boot anchor. Resolve once.
-                val window = SessionClock.resolve(session, now.zone)
-                    ?: throw IOException("Legacy session has no recoverable window in the current zone")
-                SessionClock.start(window, now)
-            }
-            state = state.copy(clock = clock)
-            if (!clock.completed || !today.isAfter(session.date)) return state
-        }
-        val policy = state.policy ?: return state
-        if (today.isBefore(state.effectiveFrom) || policy.blockedPackages.isEmpty() ||
-            today.dayOfWeek !in policy.schedule.activeDays) return state
+        val local = now.instant.atZone(now.zone).toLocalDateTime()
+        val today = local.toLocalDate()
+        if (saved.session != null && !today.isAfter(saved.session.date)) return saved
+        val policy = saved.policy ?: return saved
+        if (today.isBefore(saved.effectiveFrom) || policy.blockedPackages.isEmpty() ||
+            today.dayOfWeek !in policy.schedule.activeDays ||
+            local.toLocalTime().isBefore(policy.schedule.startTime)) return saved
         val session = RestrictionSession(today, policy)
-        val window = SessionClock.resolve(session, now.zone) ?: return state
-        if (now.instant.isBefore(window.startsAt)) return state
         // An elapsed window also counts as started, even if monitoring wasn't running then.
-        return state.copy(session = session, clock = SessionClock.start(window, now))
+        return saved.copy(session = session)
     }
 
     private fun decodeState(preferences: Preferences): SavedState {
@@ -96,12 +84,8 @@ class PolicyRepository(private val store: DataStore<Preferences>) {
                     readPolicy(preferences, SESSION),
                 )
             } else null
-            val hasClock = preferences.asMap().keys.any { it.name.startsWith("clock_") }
-            val clock = if (hasClock) {
-                requireNotNull(session) { "Clock checkpoint requires a frozen session" }
-                readClock(preferences)
-            } else null
-            SavedState(policy, effectiveFrom, session, clock)
+            // Duration checkpoints belong to the retired morning-clock policy. Ignore them.
+            SavedState(policy, effectiveFrom, session)
         } catch (error: RuntimeException) {
             // Parsing, validation, and preference-type mismatches are persisted-data failures.
             throw CorruptionException("Saved blocking policy is invalid", error)
@@ -132,30 +116,11 @@ class PolicyRepository(private val store: DataStore<Preferences>) {
 
     private fun writeSnapshot(preferences: MutablePreferences, state: SavedState) {
         state.session?.let { writeSession(preferences, it) }
-        state.clock?.let {
-            preferences[CLOCK_ZONE] = it.window.zone.id
-            preferences[CLOCK_START] = it.window.startsAt.toString()
-            preferences[CLOCK_END] = it.window.endsAt.toString()
-            preferences[CLOCK_BOOT] = it.bootCount
-            preferences[CLOCK_ELAPSED] = it.anchorElapsedMillis
-            preferences[CLOCK_REMAINING] = it.remaining.toString()
-            preferences[CLOCK_DEADLINE] = it.recoveryDeadline.toString()
-            preferences[CLOCK_COMPLETED] = it.completed
+        // Lazy migration keeps configuration/session protection while removing obsolete timers.
+        preferences.asMap().keys.filter { it.name.startsWith("clock_") }.forEach {
+            preferences.remove(it)
         }
     }
-
-    private fun readClock(preferences: Preferences): SessionClockState = SessionClockState(
-        window = ZonedSessionWindow(
-            Instant.parse(requireNotNull(preferences[CLOCK_START]) { "Missing clock start" }),
-            Instant.parse(requireNotNull(preferences[CLOCK_END]) { "Missing clock end" }),
-            ZoneId.of(requireNotNull(preferences[CLOCK_ZONE]) { "Missing clock zone" }),
-        ),
-        bootCount = requireNotNull(preferences[CLOCK_BOOT]) { "Missing clock boot count" },
-        anchorElapsedMillis = requireNotNull(preferences[CLOCK_ELAPSED]) { "Missing clock anchor" },
-        remaining = Duration.parse(requireNotNull(preferences[CLOCK_REMAINING]) { "Missing clock remainder" }),
-        recoveryDeadline = Instant.parse(requireNotNull(preferences[CLOCK_DEADLINE]) { "Missing clock deadline" }),
-        completed = requireNotNull(preferences[CLOCK_COMPLETED]) { "Missing completion marker" },
-    )
 
     private class PolicyKeys(prefix: String) {
         val start = stringPreferencesKey("${prefix}schedule_start")
@@ -171,13 +136,5 @@ class PolicyRepository(private val store: DataStore<Preferences>) {
         val SESSION = PolicyKeys("session_")
         val EFFECTIVE_FROM = stringPreferencesKey("policy_effective_from")
         val SESSION_DATE = stringPreferencesKey("session_date")
-        val CLOCK_ZONE = stringPreferencesKey("clock_zone")
-        val CLOCK_START = stringPreferencesKey("clock_start")
-        val CLOCK_END = stringPreferencesKey("clock_end")
-        val CLOCK_BOOT = intPreferencesKey("clock_boot_count")
-        val CLOCK_ELAPSED = longPreferencesKey("clock_anchor_elapsed")
-        val CLOCK_REMAINING = stringPreferencesKey("clock_remaining")
-        val CLOCK_DEADLINE = stringPreferencesKey("clock_recovery_deadline")
-        val CLOCK_COMPLETED = booleanPreferencesKey("clock_completed")
     }
 }

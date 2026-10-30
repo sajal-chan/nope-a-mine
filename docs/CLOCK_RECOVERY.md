@@ -1,49 +1,32 @@
-# Clock recovery
+# Morning clock behavior
 
-## Current scope
+## Confirmed product decision
 
-The clock model, Android reader, and atomic DataStore checkpoint/recovery path are implemented and tested. They are **not yet connected to the accessibility service or boot/time-change receivers**. Recovery occurs when the native repository is called; automatic enforcement restoration after reboot has not been validated or implemented as a receiver workflow.
+Morning restrictions follow the phone's **current local hours and time zone**. They do not preserve a remaining duration. First-time setup inside an active window starts immediately.
 
-## Proposed behavior
-
-Active-duration behavior was raised with the user and is provisional pending feedback. Tests currently preserve an active session's remaining duration across observed wall-clock/time-zone changes. Future sessions resolve using the phone's current zone.
-
-| Situation | Clock-model behavior |
+| Situation | Behavior |
 | --- | --- |
-| Process restart in the same boot | Subtract elapsed realtime since the checkpoint. |
-| Wall clock moves forward/backward | Keep the duration based on elapsed realtime; update the absolute reboot fallback. |
-| Time zone changes | Retain the active session's original resolved window; use the new zone for future resolution. |
-| Deep sleep | Count it through Android elapsed realtime, rather than uptime. |
-| Different boot count | Recover against the last absolute fallback, capped at the checkpoint's remaining duration. |
-| Completed checkpoint | Never revive it after rollback or reboot. |
-| Same boot with elapsed time moving backward | Report an error rather than guessing. |
-| Boot count missing or unreadable | Android reader throws IOException. |
+| Clock moves outside the configured hours | Unblock. |
+| Clock moves back inside the hours | Block again using the same frozen policy. |
+| Time zone changes | Evaluate the new local date, weekday, and time. |
+| Process/device restarts | Re-read the saved policy and current local time on the next native evaluation. |
+| DST jumps forward | Block if the new displayed local time is within the hours; a window wholly skipped by the jump never activates. |
+| DST repeats an hour | Evaluate each occurrence directly; e.g. 01:50 is outside a 01:15–01:45 window, while a later return to 01:20 is inside. |
 
-`SessionClockState` is an immutable checkpoint: original start/end instants and zone, boot count, elapsed anchor, precise remaining duration, absolute recovery deadline, and completion flag. Pure `recover` returns a new checkpoint. PolicyRepository commits that checkpoint with the frozen policy before returning from a successful evaluation/edit.
+Start is inclusive and end is exclusive. A session's captured apps/times remain frozen against policy edits; re-entering the window must not activate pending edits. New policy dates are still deferred after a session has begun.
 
-## Daylight saving time
+## Implementation and migration
 
-- A nonexistent local boundary shifts forward by the gap, using Java time-zone resolution.
-- A repeated local start uses its earlier occurrence; a repeated end uses its later occurrence. This forms one continuous window covering both copies of the repeated interval.
-- If resolution collapses or reverses the window, skip that occurrence rather than creating a negative or overnight restriction.
-- India half-hour offsets and ordinary non-transition dates are also covered by tests.
+ClockReading contains an Instant and ZoneId. AndroidSessionClock reads current wall time and re-reads the zone for each sample. Morning scheduling needs neither uptime nor a boot identifier. PolicyRepository evaluates local schedule rules and persists configuration, effective dates, and frozen policy snapshots.
 
-These are explicit application choices. They are not an assumption that all devices share the same time-zone database version.
+The previous duration-preserving policy was superseded by the user's decision. Its `clock_*` checkpoints are ignored, including incomplete/invalid duration fields, and removed on the next native evaluation/save. Saved configuration and session records remain validated and preserved. Unknown policy schemas or corrupt policy/session fields still report errors.
 
-## Persistence and migration
+Historical TDD entries describe the old behavior at those commits. The latest entry records the local-hours replacement and retirement of obsolete duration tests.
 
-The repository's production API takes ClockReading, not LocalDateTime. It recovers any active checkpoint before considering a new local-date session, so crossing zones cannot replace a running session. Pending edits, clock recovery, and completion are transactional. Optional schema-1 clock fields are validated as a complete group; partial/invalid groups raise CorruptionException and cannot be overwritten by ordinary saves.
+## Scope and limits
 
-Legacy snapshots have no recorded original zone or monotonic anchor. They are resolved once using the supplied current zone and then checkpointed. If this cannot produce a valid started window, evaluation reports an error instead of discarding the snapshot. Historical clock changes before that migration cannot be inferred.
+Manual clock changes can bypass morning restrictions; this is accepted for the MVP. No remaining-duration preservation, sticky expiry marker, or trusted-time workaround is used for morning hours.
 
-DataStore tests close/reopen real files and cover clock jumps, zone changes, simulated boot-count changes, persistent completion, concurrent edits/recovery, legacy records, corrupt metadata, and DST transitions. Simulated inputs are not physical-device reboot tests.
+Emergency access is a separate feature: its 60-second wait and five-minute access period must still use persisted monotonic deadlines and explicit reboot handling when implemented.
 
-## Remaining integration
-
-Boot/time-change receivers and service behavior are separate integration work; they must not attempt to reactivate force-stopped applications or disabled accessibility access. Service integration should keep frequent countdown calculations in memory and checkpoint at recovery/clock/policy boundaries rather than blindly writing DataStore on every 250 ms foreground poll.
-
-## Limits
-
-No offline consumer app has trusted time across a reboot if the wall clock was changed while it was not observing. Capping the recovered remainder prevents it from increasing beyond the checkpoint; it does not prove the elapsed real-world time during that gap. Physical Samsung restart/sleep/clock tests remain pending. Emergency-override reboot rules are not implemented here.
-
-References: [Android SystemClock](https://developer.android.com/reference/android/os/SystemClock), [Android boot count](https://developer.android.com/reference/android/provider/Settings.Global#BOOT_COUNT), and [Java zone gap/overlap resolution](https://docs.oracle.com/javase/8/docs/api/java/time/ZonedDateTime.html).
+Service integration, boot/time-change receivers, and physical Samsung testing remain pending. Repository reopen tests are not claims of actual device reboot or enforcement validation.

@@ -2,6 +2,8 @@
 
 Use red → green → refactor for every behavior change. Generated framework/build scaffolding is infrastructure; application behavior starts with a failing test. Tests do not substitute for physical-device enforcement validation.
 
+Historical entries reflect requirements at their commits. The confirmed local-hours change below supersedes the earlier provisional duration-preserving morning clock policy.
+
 ## Phase 1
 
 - Native gate tests written before implementation: Instagram matching, repeated-event deduplication, unrelated-app access, leaving/reopening, unknown foreground, presentation failure/retry, and cleanup.
@@ -123,3 +125,15 @@ Announced and implemented separately after committing the pure clock foundation.
 **Verification:** all 126 native tests passed, including the previous 111, with zero failures/errors/skips. Lint completed with zero errors and eighteen warnings, and the ARM64 debug build passed. JavaScript behavior and bridge are unchanged; no JavaScript suite rerun.
 
 Recovery is lazy on native repository calls; no boot receiver, time-change receiver, alarm rescheduling, or live AccessibilityService wiring is included. Samsung validation and the provisional clock-policy decision remain open. Offline clock manipulation across an unobserved reboot cannot be fully trusted; see CLOCK_RECOVERY.md.
+
+## Confirmed change — morning sessions follow local hours (2026-10-30)
+
+The user chose simple current-local-hours behavior rather than duration preservation, and confirmed immediate first-time setup inside the window. Announced clock-forward/backward, zone-change, reopen, frozen-policy, DST, and legacy-checkpoint cases before changing implementation.
+
+**Red:** updated the fifteen repository clock cases and the Android-reader missing-boot case before production changes. Eighteen targeted tests ran, with fifteen failures against the old implementation. Replaced continuous DST-window expectations with direct local-hour comparisons. Removed seventeen obsolete duration-state tests because that behavior was explicitly rejected by the user.
+
+**Green/refactor:** ClockReading now contains only instant and zone. Removed SessionClockState, monotonic morning recovery, absolute fallback checkpoints, boot-count reads, and sticky expiry. Native evaluation follows current local weekdays/hours using the frozen policy; rollback can re-enter the same window without applying pending edits. Obsolete `clock_*` fields are ignored and lazily removed while retaining policy/session data. Shared schedule rules remain authoritative for inclusive start/exclusive end. Emergency timers are not implemented or changed; their future monotonic requirement remains.
+
+**Verification:** all 106 native tests passed after the behavior change and final refactor, with zero failures/errors/skips. The lower count reflects retirement of seventeen duration tests and consolidation of nine zone-resolution tests into six local-clock cases. Lint completed with zero errors and eighteen warnings, and the ARM64 debug build passed. JavaScript is unchanged and its suite was not rerun.
+
+Updated AGENTS.md, product specification, README, and clock behavior notes to record both decisions and the accepted manual-clock bypass. Live service/broadcast wiring and physical Samsung tests remain pending.

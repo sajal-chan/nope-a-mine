@@ -43,6 +43,7 @@ Validate current Android API behavior and Google Play requirements using officia
 
 - Supported initial targets: Instagram, YouTube, Reddit, identified by package name; allow future additions.
 - Recurring local-time schedules have start/end times and active weekdays. MVP schedules do not cross midnight.
+- Morning sessions follow current local hours and time zone; do not preserve remaining duration across clock changes. Clock changes are an accepted bypass limitation. First-time setup inside an active window starts immediately. Monotonic countdowns are reserved for emergency waiting/access, not morning-session duration.
 - Once a session starts, freeze its effective policy. Edits apply to the next eligible session, never immediately bypass the active one.
 - Blocking UI is minimal: “Not right now.”, the blocked app and scheduled unlock time, and emergency-access action when implemented. No motivation, gamification, or unnecessary interactions.
 - Emergency access requires a 60-second wait and explicit confirmation, then allows all selected apps for at most five minutes and never past session end.

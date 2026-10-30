@@ -10,6 +10,8 @@ Help users honor an advance decision to avoid distracting social applications du
 
 Users select supported applications by Android package name, initially Instagram, YouTube, and Reddit. They configure a daily start time, end time, and active weekdays. Windows do not cross midnight. Only selected applications are interrupted; unrelated applications remain usable. Restrictions start and expire automatically.
 
+Confirmed clock policy: morning restrictions follow the device's current local hours and time zone. Moving outside the window unblocks; moving back inside reactivates the same frozen policy. Do not preserve elapsed duration for morning sessions. Manual clock changes are an accepted bypass limitation. First-time setup during an active window starts immediately. Emergency waiting/access timers remain monotonic as specified below.
+
 On a restricted launch, detect the foreground package, evaluate native policy, and show a native blocking interface. The intended full-MVP wording is “Not right now.” and “Instagram is blocked until 9:00 AM.” with the actual app and unlock time, plus an emergency-access option. The proof of concept must identify itself as such and must not imply scheduling or emergency access already exists.
 
 During a session, edits must not weaken its active policy. Save changes for the next eligible morning session. Users can always revoke permissions or uninstall through Android settings.
