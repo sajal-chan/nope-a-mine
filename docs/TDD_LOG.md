@@ -151,3 +151,17 @@ Announced thirty-three cases before implementing behavior: active/inactive state
 **Verification:** all 141 native tests passed (35 emergency + previous 106), with zero failures/errors/skips. Android lint completed with zero errors and eighteen warnings; the ARM64 debug build passed. No JavaScript, permissions, dependency, or live enforcement changes; no JavaScript suite rerun.
 
 This is the rules-only subtask. Restored-state tests copy immutable model objects and supply simulated elapsed/boot inputs, not actual file or process recovery. Native monotonic-clock reading, DataStore persistence/concurrency, UI/bridge, service integration, and physical-device tests remain separate work. See EMERGENCY_ACCESS.md for the storage contract.
+
+## Emergency access, subtask 2 — DataStore and native monotonic reader (2026-10-30)
+
+Announced persistence/reopen, boot recovery, concurrent commands, invalid/failed storage, and reader cases before implementation. Added 31 tests: 25 real DataStore/transaction cases, five Android clock-reader cases, and one application-store factory case.
+
+Cases include request/readiness/access restoration without extending deadlines; cancellation/retry; simulated reboot during pending, ready, and active states; persistent consumption when revisiting an older session ID; concurrent requests/confirmations; morning-window cancellation/capping; missing/invalid state or usage ledger; future schema and malformed protobuf retention; IO/context failures; failed confirmation writes; elapsed regression; and committing reboot cancellation even when confirmation is rejected. Reader tests verify elapsed realtime, controlled advancement, reread boot identity, and missing/negative boot-count errors.
+
+**Red:** all 31 new tests executed against compileable stubs; 27 failed. Strengthened three positive stored-wait assertions before implementation and reran: 30 failed, with only the fresh unused state case passing.
+
+**Green:** added EmergencyRepository with context sampling, state advance, command, and consumed-session set in one DataStore transaction. An append-only used-ID set preserves the allowance limit across session changes/reopen. Business-command rejections are thrown after required normalization is committed; other failures propagate without resetting state. Added the application-level Preferences DataStore factory and AndroidOverrideClock using elapsedRealtime plus BOOT_COUNT, failing on unavailable identity. No dependency, permission, JavaScript, or live enforcement changes.
+
+**Verification:** all 172 native tests passed (31 new + previous 141), with zero failures/errors/skips, including the strengthened old-session reuse case that closes/reopens the file before revisiting the consumed ID. Android lint completed with zero errors and eighteen warnings; the ARM64 debug build passed. No JavaScript suite rerun because JavaScript is unchanged.
+
+Actual device process termination/reboot/sleep remain untested. The native context provider is injected and not yet wired to the policy repository or live service/UI. State is recovered lazily on commands/status, not by a boot receiver. Morning local-hour behavior is unchanged. See EMERGENCY_ACCESS.md for API/transaction semantics and remaining integration.
