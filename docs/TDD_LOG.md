@@ -73,3 +73,23 @@ Cases announced before implementation and covered by twenty-one new tests:
 **Regression result:** all sixty native tests passed: twenty repository tests, one Android store-factory test, twenty-one schedule-rule tests, and eighteen blocker tests. No failures/errors/skips. `:app:lintDebug` completed with zero errors and eighteen warnings (existing manifest/resources plus dependency update notices). `:app:assembleDebug` passed for ARM64. No JavaScript behavior changed, so the JavaScript suite was not rerun for this native-only subtask.
 
 The configuration repository remains independent of the service and JavaScript bridge. Active-session freezing, pending edits, recovery, overrides, and physical-device enforcement validation are not implemented by this subtask. Saved package names are not assumed to be installed. Explicit storage repair/migration and UI error presentation remain future work.
+
+## Phase 2, subtask 3 — active-session policy protection (2026-10-30)
+
+Cases explained before implementation:
+
+- Unconfigured and pre-window states; exact start/end boundaries; late first evaluation retaining the original scheduled start.
+- Earlier/later end edits, app removal, clearing selected days/apps, and edits exactly at start or before any session evaluation preserving the original session.
+- Pre-session edits applying that morning; latest repeated edit and weekday changes applying on the next eligible date.
+- No second same-day session after an edit, including when the original window elapsed without being observed.
+- Frozen policy and pending edits surviving DataStore close/reopen; concurrent edit/evaluation preserving one original policy.
+- Partial saved session and storage failures surfacing as errors rather than clearing protection.
+- First-time setup inside its active window starting immediately on evaluation (provisional assumption, raised with the user asynchronously).
+
+**Red:** the first twenty session tests executed against a null-returning session stub; fifteen failed. Added two tests for first-time in-window setup and an elapsed unobserved window before implementation. The second red run executed twenty-two tests with seventeen failures; five inactive cases already passed. Existing persistence tests were adapted to pass explicit pre-window timestamps through the new save API.
+
+**Green:** added immutable `RestrictionSession` and optional schema-1 session metadata. `save(policy, now)` captures the old policy and stores a later effective date for edits once a session has begun. `activeSessionAt(now)` captures/returns the frozen session transactionally. Expired snapshots remain as a same-date guard; new eligible dates can capture the latest policy. Read-only configuration APIs return the latest configured/pending policy and are explicitly documented as unsuitable for direct enforcement. Shared policy encoding/validation is reused for configuration and snapshots. Existing configuration-only records remain compatible.
+
+**Verification:** all eighty-two native tests passed: twenty-two session tests plus the previous sixty. Zero failures/errors/skips. Android lint completed with zero errors and eighteen warnings; the ARM64 debug build passed. No JavaScript changes; the JavaScript suite was not rerun.
+
+No service, alarm, boot receiver, JavaScript bridge, emergency override, or history integration is included. Device validation and wall-clock/time-zone/DST recovery remain pending. The immediate-first-setup behavior is a stated provisional choice, not a user approval or a completed UI decision.

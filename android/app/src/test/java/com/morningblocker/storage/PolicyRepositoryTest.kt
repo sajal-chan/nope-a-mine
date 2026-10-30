@@ -9,6 +9,7 @@ import java.io.File
 import java.io.IOException
 import java.time.DayOfWeek.*
 import java.time.LocalTime
+import java.time.LocalDateTime
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
@@ -36,6 +37,9 @@ class PolicyRepositoryTest {
         return OpenStore(data, job)
     }
     @After fun closeStores() = runBlocking { jobs.forEach { it.cancelAndJoin() } }
+    // Configuration persistence cases run before every test policy's start time.
+    private suspend fun PolicyRepository.save(policy: BlockingPolicy) =
+        save(policy, LocalDateTime.parse("2026-11-02T00:00"))
     private fun policy(
         start: String = "06:00", end: String = "09:00",
         packages: Set<String> = setOf("com.instagram.android", "com.google.android.youtube", "com.reddit.frontpage"),
