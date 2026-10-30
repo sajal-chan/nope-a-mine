@@ -137,3 +137,17 @@ The user chose simple current-local-hours behavior rather than duration preserva
 **Verification:** all 106 native tests passed after the behavior change and final refactor, with zero failures/errors/skips. The lower count reflects retirement of seventeen duration tests and consolidation of nine zone-resolution tests into six local-clock cases. Lint completed with zero errors and eighteen warnings, and the ARM64 debug build passed. JavaScript is unchanged and its suite was not rerun.
 
 Updated AGENTS.md, product specification, README, and clock behavior notes to record both decisions and the accepted manual-clock bypass. Live service/broadcast wiring and physical Samsung tests remain pending.
+
+## Emergency access, subtask 1 — independent state machine (2026-10-30)
+
+Announced thirty-three cases before implementing behavior: active/inactive states; fixed 60-second wait; exact readiness and explicit confirmation; early/unsolicited confirmation; five minutes from confirmation; cancellation in wait/ready; idempotent requests/confirmation; exact expiry; one-use limit; cap at morning end and later cap reduction; no extension after the morning bound grows; window exit/re-entry; same-boot restored-state deadlines; reboot during wait/ready/access; a genuine new session; elapsed regression; canceling granted access; deadline overflow; and invalid inputs/state.
+
+**Red:** all thirty-three tests ran against compileable stubs; twenty-nine failed. Strengthened three positive setup assertions before implementation (ready/used state), then reran: thirty-two failed, with only the basic blocking default passing.
+
+**Green:** implemented immutable OverrideClock, EmergencyContext, EmergencyState, phases, and pure advance/request/confirm/cancel functions. Wait and access deadlines are monotonic and fixed. Confirmation consumes the allowance; cancellation of a pending request does not. A boot change clears timers without clearing completed usage. Leaving the morning window clears timers and retains usage for re-entry. Duplicate commands cannot extend deadlines. No clock is read implicitly and no JavaScript timer is involved.
+
+**Additional red/green:** after the first implementation passed all 139 native tests, added two saved-state deadline-bound tests. Both failed before validation was added. Shared maximum durations now validate saved metadata; boot recovery clears stale timers atomically before adopting the new boot clock. Both new cases passed.
+
+**Verification:** all 141 native tests passed (35 emergency + previous 106), with zero failures/errors/skips. Android lint completed with zero errors and eighteen warnings; the ARM64 debug build passed. No JavaScript, permissions, dependency, or live enforcement changes; no JavaScript suite rerun.
+
+This is the rules-only subtask. Restored-state tests copy immutable model objects and supply simulated elapsed/boot inputs, not actual file or process recovery. Native monotonic-clock reading, DataStore persistence/concurrency, UI/bridge, service integration, and physical-device tests remain separate work. See EMERGENCY_ACCESS.md for the storage contract.
