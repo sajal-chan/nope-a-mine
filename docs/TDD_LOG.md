@@ -52,3 +52,24 @@ Cases covered by twenty-one tests:
 **Regression check:** all thirty-nine native tests passed (twenty-one schedule tests plus the existing eighteen blocker tests), with zero failures/errors/skips. `:app:lintDebug` completed with zero errors and sixteen warnings concerning existing resources/manifest configuration and a test-dependency update notice; none refer to the scheduling sources. `:app:assembleDebug` passed for ARM64, including core-library desugaring. No JavaScript behavior changed, so the JavaScript suite was not rerun for this native-only subtask.
 
 Persistence, package selection storage, active-session policy freezing, enforcement integration, clock/time-zone/DST recovery, and device validation remain separate work. This subtask makes no claim that real-device blocking is reliable or schedule-driven.
+
+## Phase 2, subtask 2 — DataStore configuration persistence (2026-10-30)
+
+Cases announced before implementation and covered by twenty-one new tests:
+
+- Fresh-install unconfigured state; complete schedule/package round trip; closing and reopening a real temporary store; seconds/nanoseconds retained exactly.
+- Empty weekdays/packages; complete replacement of previous selections; defensive copying; malformed package identifiers rejected.
+- Observable complete policy updates; concurrent saves retaining a whole policy rather than mixed fields.
+- Partial records, invalid times, overnight windows, unknown weekdays, invalid packages, and wrong preference types reported as corruption.
+- Future schema rejected for reads and writes; corrupt file bytes preserved; read/write IO failures propagated.
+- Android context wrappers sharing one application-level DataStore instance.
+
+**Red:** the twenty repository tests ran against compileable stubs; nineteen failed, with only the fresh-install case passing. The additional Android factory test failed at its unimplemented factory stub after correcting a test API signature. The observer test timed out waiting for updates and the concurrent-save test hit its missing saved policy; other failures established absent validation, persistence, and error reporting.
+
+**Green:** implemented immutable `BlockingPolicy`, `PolicyRepository` using Preferences DataStore 1.2.1, and an application-context factory using a file-scope `preferencesDataStore` delegate. Reads expose a nullable policy and a flow. Writes replace all policy fields transactionally after validating existing schema/data. Schema 1 persists ISO local times, weekday names, and package names. No corruption replacement handler is installed and IO failures are not swallowed. Unknown schema versions cannot be overwritten by ordinary saves. Coroutines 1.10.2 are explicitly declared.
+
+**Test runtime finding:** the first implementation run passed fifty-seven of sixty tests, but repeated writes failed on Windows when the Android DataStore artifact ran with stub Android APIs outside Robolectric. Running repository tests under Robolectric API 34 (still using actual temporary disk files and real DataStore instances) resolved all three file-replacement failures without a production workaround.
+
+**Regression result:** all sixty native tests passed: twenty repository tests, one Android store-factory test, twenty-one schedule-rule tests, and eighteen blocker tests. No failures/errors/skips. `:app:lintDebug` completed with zero errors and eighteen warnings (existing manifest/resources plus dependency update notices). `:app:assembleDebug` passed for ARM64. No JavaScript behavior changed, so the JavaScript suite was not rerun for this native-only subtask.
+
+The configuration repository remains independent of the service and JavaScript bridge. Active-session freezing, pending edits, recovery, overrides, and physical-device enforcement validation are not implemented by this subtask. Saved package names are not assumed to be installed. Explicit storage repair/migration and UI error presentation remain future work.

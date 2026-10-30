@@ -4,7 +4,7 @@ Android-only React Native / Kotlin proof of concept for interrupting Instagram. 
 
 **Prototype behavior:** Instagram is blocked whenever the accessibility service is enabled. There is no schedule, emergency access, app selection, history, or backend yet. Disable the service in Android accessibility settings to stop the prototype.
 
-Pure Kotlin schedule rules are available for future integration: selected weekdays, same-day start/end boundaries, and next-session calculation. They do not yet change the installed prototype's behavior. Persistence, active-session freezing, time-zone/clock recovery, and enforcement integration are separate subtasks.
+Pure Kotlin schedule rules and DataStore configuration persistence are available for future integration. They do not yet change the installed prototype's behavior. Active-session freezing, time-zone/clock recovery, and enforcement integration are separate subtasks.
 
 ## Development
 
@@ -40,6 +40,7 @@ The release build currently uses the template's public debug key **for local tes
 - `src/native/BlockingModule.ts`: typed native bridge.
 - `android/app/src/main/java/com/morningblocker/blocking/`: native service, presentation, policy gate, and bridge.
 - `android/app/src/main/java/com/morningblocker/scheduling/`: immutable schedule configuration and pure local-time rules, with the current time supplied by the caller.
+- `android/app/src/main/java/com/morningblocker/storage/`: immutable policy and atomic Preferences DataStore repository. `policyRepository(context)` shares one application-level store; suspend `save`/`load` and the `policies` flow do not require React Native.
 - `android/app/src/test/`: Kotlin policy, presentation, and service tests.
 - `__tests__/`: setup-screen behavior tests.
 - [Physical-device testing and limitations](docs/PHASE_1_TESTING.md).
@@ -47,6 +48,8 @@ The release build currently uses the template's public debug key **for local tes
 - [TDD evidence](docs/TDD_LOG.md).
 
 ## Design references
+
+Configuration persistence uses [Preferences DataStore](https://developer.android.com/topic/libraries/architecture/datastore), pinned to 1.2.1. Schema version 1 stores ISO local start/end times, weekday names, and selected package identifiers in one transaction. Empty storage means unconfigured; empty selections are retained as empty. Package identifiers are validated without checking installed applications. Read/write failures, invalid saved fields, and future schema versions are surfaced instead of silently resetting data. A normal save cannot overwrite damaged or newer-schema data; explicit repair/migration is future work. This repository stores configuration, not active-session or override state, and is not yet exposed through the React Native bridge.
 
 The schedule rules use `java.time` with [Android core library desugaring](https://developer.android.com/studio/write/java8-support#library-desugaring) to retain minimum API 24 compatibility. Start is inclusive, end is exclusive, and empty weekdays disable the schedule. “Next session” is the next strictly future start, excluding an active session. These local-time calculations do not define DST/zone-change handling or freeze an active session; those belong to later recovery/session work.
 

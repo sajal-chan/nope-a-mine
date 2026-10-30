@@ -16,7 +16,7 @@ This repository builds an Android-first, offline morning social-media blocker fo
 
 The first deliverable is a minimal React Native TypeScript application with native Kotlin code that detects Instagram (`com.instagram.android`) entering the foreground and interrupts interaction on a physical Android device, including when the React Native UI is closed.
 
-Physical Phase 1 testing is pending. The user authorized independently tested schedule rules while device testing is deferred. Complete the device-validation milestone before integrating scheduling into enforcement; emergency overrides, history, and polished UI remain later phases. Explain the chosen Android APIs, permissions, and limitations. Supply installation, permission setup, and repeatable physical-device test instructions. Record observed reliability problems. A successful build or one displayed overlay does not establish reliable enforcement. Do not claim physical-device validation without performing it.
+Physical Phase 1 testing is pending. The user authorized independently tested schedule rules and configuration persistence while device testing is deferred. Complete the device-validation milestone before integrating scheduling into enforcement; emergency overrides, history, and polished UI remain later phases. Explain the chosen Android APIs, permissions, and limitations. Supply installation, permission setup, and repeatable physical-device test instructions. Record observed reliability problems. A successful build or one displayed overlay does not establish reliable enforcement. Do not claim physical-device validation without performing it.
 
 ## Architecture
 
