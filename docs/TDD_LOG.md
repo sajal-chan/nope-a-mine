@@ -93,3 +93,21 @@ Cases explained before implementation:
 **Verification:** all eighty-two native tests passed: twenty-two session tests plus the previous sixty. Zero failures/errors/skips. Android lint completed with zero errors and eighteen warnings; the ARM64 debug build passed. No JavaScript changes; the JavaScript suite was not rerun.
 
 No service, alarm, boot receiver, JavaScript bridge, emergency override, or history integration is included. Device validation and wall-clock/time-zone/DST recovery remain pending. The immediate-first-setup behavior is a stated provisional choice, not a user approval or a completed UI decision.
+
+## Recovery, subtask 1 — zone-aware deadlines and clock model (2026-10-30)
+
+Announced a separate clock-model/reader commit before DataStore integration. Asked the user about active-session behavior during clock changes; preserving duration is a stated provisional assumption while feedback is pending.
+
+Twenty-nine new tests cover:
+
+- Nine zone-resolution cases: India half-hour offset, ordinary New York date, shortened elapsed duration across spring DST, nonexistent start/both boundaries, collapsed/inverted windows, the repeated autumn hour, and future zone changes without mutating a previously resolved window.
+- Seventeen recovery cases: original deadline, late start, pre-start rejection, exact end, process-restart checkpoint, forward/backward wall changes, zone changes, sleep, new boot fallback, rollback cap, completion after reboot, sticky completion, regressing elapsed time, re-anchored reboot fallback, invalid readings/state, and submillisecond precision.
+- Three Android-reader cases: wall/elapsed/boot/zone sample, zone reread per sample, and missing boot identity error. The reader uses the application context.
+
+**Red:** twenty-eight tests executed against null/throwing stubs; twenty-six failed, with only the two skipped-window cases passing. Added the invalid-checkpoint test before implementation and ran the seventeen recovery tests; all failed. No production behavior was implemented before those failures.
+
+**Green:** implemented immutable clock readings/windows/checkpoints, DST-aware instant resolution, monotonic same-boot recovery, capped absolute-deadline recovery after reboot, and sticky completion. Observed wall-clock changes re-anchor the reboot fallback while retaining the original scheduled window. The Android adapter reads SystemClock.elapsedRealtime and Settings.Global.BOOT_COUNT, failing explicitly when boot identity is unavailable. No dependency or permission additions.
+
+**Verification:** the full native suite passed all 111 tests, including the previous 82, after the application-context refactor. Lint completed with zero errors and eighteen warnings; the ARM64 debug build passed. JavaScript was unchanged and its suite was not rerun.
+
+Clock checkpoints are not serialized or wired into PolicyRepository yet; the old LocalDateTime repository behavior remains. Process restart/reboot tests exercise model inputs, not an actual device restart. See CLOCK_RECOVERY.md for the next storage-integration subtask and the offline-time limitations. No boot receiver or live enforcement changes are included.

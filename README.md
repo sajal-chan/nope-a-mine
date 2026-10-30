@@ -4,7 +4,7 @@ Android-only React Native / Kotlin proof of concept for interrupting Instagram. 
 
 **Prototype behavior:** Instagram is blocked whenever the accessibility service is enabled. There is no schedule, emergency access, app selection, history, or backend yet. Disable the service in Android accessibility settings to stop the prototype.
 
-Pure Kotlin schedule rules, DataStore persistence, and active-session policy protection are available for future integration. They do not yet change the installed prototype's behavior. Time-zone/clock recovery and enforcement integration remain separate subtasks.
+Pure Kotlin schedule rules, DataStore persistence, active-session policy protection, and a clock-recovery model are available for future integration. They do not yet change the installed prototype's behavior. Persisting/wiring clock checkpoints and enforcement integration remain separate subtasks.
 
 ## Development
 
@@ -46,6 +46,7 @@ The release build currently uses the template's public debug key **for local tes
 - [Physical-device testing and limitations](docs/PHASE_1_TESTING.md).
 - [Product specification](docs/PRODUCT_SPEC.md) and [development instructions](AGENTS.md).
 - [TDD evidence](docs/TDD_LOG.md).
+- [Clock recovery behavior and integration limits](docs/CLOCK_RECOVERY.md).
 
 ## Design references
 
