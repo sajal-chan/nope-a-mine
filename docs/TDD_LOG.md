@@ -111,3 +111,15 @@ Twenty-nine new tests cover:
 **Verification:** the full native suite passed all 111 tests, including the previous 82, after the application-context refactor. Lint completed with zero errors and eighteen warnings; the ARM64 debug build passed. JavaScript was unchanged and its suite was not rerun.
 
 Clock checkpoints are not serialized or wired into PolicyRepository yet; the old LocalDateTime repository behavior remains. Process restart/reboot tests exercise model inputs, not an actual device restart. See CLOCK_RECOVERY.md for the next storage-integration subtask and the offline-time limitations. No boot receiver or live enforcement changes are included.
+
+## Recovery, subtask 2 — atomic persisted clock checkpoints (2026-10-30)
+
+Announced and implemented separately after committing the pure clock foundation. Fifteen new DataStore tests cover actual file reopen after forward/backward clock changes; zone changes across dates; persistent completion after rollback; simulated reboot before/after expiry; saved fallback after an observed wall jump; edits during rollback; missing/invalid metadata; elapsed regression without data loss; concurrent recovery/edit; one-time legacy anchoring; and spring/autumn DST boundaries.
+
+**Red:** fifteen tests ran against adapters that only converted ClockReading back to the old LocalDateTime API. Thirteen failed. Strengthened the reboot test to verify the saved boot identity and the autumn test to sample between the two occurrences; all fifteen failed before production recovery integration.
+
+**Green:** removed the production local-timestamp overloads. Native mutations/evaluation now require ClockReading, recover active clocks before considering new dates, and persist complete clock metadata with the frozen policy in a single DataStore edit. Completed markers remain terminal for that session. Pending edits are deferred even when a clock/zone change moves the local date backward. Existing local-rule tests use test-only UTC clock adapters that advance wall and elapsed time together. Legacy snapshots without clock metadata are anchored once using the supplied zone; malformed/partial groups remain errors. No dependency or permission additions.
+
+**Verification:** all 126 native tests passed, including the previous 111, with zero failures/errors/skips. Lint completed with zero errors and eighteen warnings, and the ARM64 debug build passed. JavaScript behavior and bridge are unchanged; no JavaScript suite rerun.
+
+Recovery is lazy on native repository calls; no boot receiver, time-change receiver, alarm rescheduling, or live AccessibilityService wiring is included. Samsung validation and the provisional clock-policy decision remain open. Offline clock manipulation across an unobserved reboot cannot be fully trusted; see CLOCK_RECOVERY.md.

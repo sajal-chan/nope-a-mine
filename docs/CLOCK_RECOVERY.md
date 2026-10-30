@@ -1,8 +1,8 @@
-# Clock recovery — first subtask
+# Clock recovery
 
 ## Current scope
 
-The clock model and Android clock reader are implemented and tested. They are **not yet connected to PolicyRepository, DataStore, the accessibility service, or a boot receiver**. The existing repository still evaluates local date/time. This commit alone does not make persisted sessions resistant to clock changes or recover enforcement after reboot.
+The clock model, Android reader, and atomic DataStore checkpoint/recovery path are implemented and tested. They are **not yet connected to the accessibility service or boot/time-change receivers**. Recovery occurs when the native repository is called; automatic enforcement restoration after reboot has not been validated or implemented as a receiver workflow.
 
 ## Proposed behavior
 
@@ -19,7 +19,7 @@ Active-duration behavior was raised with the user and is provisional pending fee
 | Same boot with elapsed time moving backward | Report an error rather than guessing. |
 | Boot count missing or unreadable | Android reader throws IOException. |
 
-`SessionClockState` is an immutable checkpoint: original start/end instants and zone, boot count, elapsed anchor, precise remaining duration, absolute recovery deadline, and completion flag. `recover` returns a new checkpoint; it does not persist it. Its consumer must commit it durably before relying on its updated deadline or completion marker.
+`SessionClockState` is an immutable checkpoint: original start/end instants and zone, boot count, elapsed anchor, precise remaining duration, absolute recovery deadline, and completion flag. Pure `recover` returns a new checkpoint. PolicyRepository commits that checkpoint with the frozen policy before returning from a successful evaluation/edit.
 
 ## Daylight saving time
 
@@ -30,9 +30,17 @@ Active-duration behavior was raised with the user and is provisional pending fee
 
 These are explicit application choices. They are not an assumption that all devices share the same time-zone database version.
 
-## Next subtask
+## Persistence and migration
 
-Persist checkpoints atomically with the frozen policy, validate and migrate old records, and recover them through the native repository. Tests must cover actual DataStore reopen, missing/partial clock metadata, concurrent recovery/edits, sticky completion after reopen, and clock-aware gating of future sessions. Boot/time-change receivers and service behavior are separate integration work; they must not attempt to reactivate force-stopped applications or disabled accessibility access.
+The repository's production API takes ClockReading, not LocalDateTime. It recovers any active checkpoint before considering a new local-date session, so crossing zones cannot replace a running session. Pending edits, clock recovery, and completion are transactional. Optional schema-1 clock fields are validated as a complete group; partial/invalid groups raise CorruptionException and cannot be overwritten by ordinary saves.
+
+Legacy snapshots have no recorded original zone or monotonic anchor. They are resolved once using the supplied current zone and then checkpointed. If this cannot produce a valid started window, evaluation reports an error instead of discarding the snapshot. Historical clock changes before that migration cannot be inferred.
+
+DataStore tests close/reopen real files and cover clock jumps, zone changes, simulated boot-count changes, persistent completion, concurrent edits/recovery, legacy records, corrupt metadata, and DST transitions. Simulated inputs are not physical-device reboot tests.
+
+## Remaining integration
+
+Boot/time-change receivers and service behavior are separate integration work; they must not attempt to reactivate force-stopped applications or disabled accessibility access. Service integration should keep frequent countdown calculations in memory and checkpoint at recovery/clock/policy boundaries rather than blindly writing DataStore on every 250 ms foreground poll.
 
 ## Limits
 
