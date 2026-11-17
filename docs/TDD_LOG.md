@@ -169,3 +169,15 @@ Actual device process termination/reboot/sleep remain untested. The native conte
 ## Progress handoff (2026-11-18)
 
 Documentation-only subtask: added HANDOFF.md and a README link. Inspected the code/document inventory, working tree, commit baseline, local branch tracking, and existing APK metadata. Separated implemented independent logic from installed prototype behavior and ordered the remaining tasks behind physical Phase 1 validation. Verification figures are explicitly attributed to the 2026-11-05 preflight, not claimed as new results. Checked relative document links and Git whitespace. No application behavior changed; red/green tests and application suite reruns are not applicable to this documentation update.
+
+## Fresh standalone build for physical testing (2026-11-18)
+
+User requested a fresh APK before phone validation. No application behavior changed, so a failing behavior test/red phase is not applicable. Verification covers the existing native and setup behavior, static checks, a clean app release rebuild, and APK signature verification; physical interruption remains untested.
+
+Built from clean tracked source at `808e1d1` (application code baseline `ed265d4`) using checksum-verified temporary Node 22.23.4, JDK 17, Android SDK/Build Tools 36, and ARM64. The default Node 22.12.0 was not used and no system runtime configuration was changed. SDK/runtime discovery required access outside the workspace sandbox.
+
+**Green:** `:app:clean :app:testDebugUnitTest :app:assembleRelease -PreactNativeArchitectures=arm64-v8a` succeeded in 4m 15s, including bundled JavaScript and release vital lint. All 172 native tests passed with zero failures, errors, or skips. Direct Node Jest invocation with `--runInBand --watchman=false` passed all nine tests; TypeScript passed; ESLint on tracked JS/TS/TSX files reported zero errors and one warning for explicitly passing ignored `.prettierrc.js`. Existing Kotlin deprecation/parameter-name and Gradle deprecation warnings remain.
+
+**Artifact:** `android/app/build/outputs/apk/release/app-release.apk`, 18,182,210 bytes, built 2026-11-18 at 03:12:18 local time (Asia/Calcutta). SHA-256: `42f4edefe353a9eb1f02cf3dd5aa47eddb4b795f7caa28fa3e60fc81e6e683b6`. Build Tools 36 `apksigner verify --verbose --print-certs` passed with APK Signature Scheme v2 and the existing Android debug certificate. This remains a standalone local-test build, version 1.0/versionCode 1, with Instagram-only continuous enforcement.
+
+ADB started successfully but `devices -l` listed no devices. No installation, device interaction, or physical reliability result is claimed. Follow PHASE_1_TESTING.md after connecting the phone. Raw Gradle output is retained locally at `android/build/physical-preflight-2026-11-18.log` (ignored build artifact).

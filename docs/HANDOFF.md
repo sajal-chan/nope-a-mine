@@ -43,7 +43,7 @@ Scheduling and emergency-access rules have been developed independently while ph
 
 ## Verification available at handoff
 
-Last preflight: **2026-11-05**, against the same application code baseline.
+Last preflight: **2026-11-18**, clean app rebuild from `808e1d1`, against the same application code baseline. See the latest TDD_LOG.md entry for the APK checksum and exact commands.
 
 | Check | Recorded result |
 | --- | --- |
@@ -51,10 +51,10 @@ Last preflight: **2026-11-05**, against the same application code baseline.
 | JavaScript Jest | 9 tests passed |
 | TypeScript | Passed |
 | ESLint on tracked source/configuration files | Zero errors; one warning for explicitly passing ignored `.prettierrc.js` |
-| Android debug lint | Zero errors, 18 warnings |
+| Android debug lint | Last run 2026-11-05: zero errors, 18 warnings; not rerun on November 18 |
 | Standalone ARM64 release build and release vital checks | Passed |
 | APK signature verification | Passed |
-| Physical phone testing | Pending; ADB detected no phone during that preflight |
+| Physical phone testing | Pending; ADB detected no phone on November 18 |
 
 Jest passed using `--runInBand --watchman=false` after the local Watchman path stalled. PowerShell/npm also dropped the intended Jest argument on that run; use direct Node invocation if this recurs. Bundling subsequently completed. These are local tooling observations, not blocker reliability results.
 
