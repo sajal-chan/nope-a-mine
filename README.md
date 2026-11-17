@@ -49,6 +49,7 @@ The release build currently uses the template's public debug key **for local tes
 - [Physical-device testing and limitations](docs/PHASE_1_TESTING.md).
 - [Product specification](docs/PRODUCT_SPEC.md) and [development instructions](AGENTS.md).
 - [TDD evidence](docs/TDD_LOG.md).
+- [Current progress and remaining tasks](docs/HANDOFF.md).
 - [Clock recovery behavior and integration limits](docs/CLOCK_RECOVERY.md).
 - [Emergency-access state machine and persistence contract](docs/EMERGENCY_ACCESS.md).
 

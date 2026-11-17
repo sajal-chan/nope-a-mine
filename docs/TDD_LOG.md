@@ -165,3 +165,7 @@ Cases include request/readiness/access restoration without extending deadlines; 
 **Verification:** all 172 native tests passed (31 new + previous 141), with zero failures/errors/skips, including the strengthened old-session reuse case that closes/reopens the file before revisiting the consumed ID. Android lint completed with zero errors and eighteen warnings; the ARM64 debug build passed. No JavaScript suite rerun because JavaScript is unchanged.
 
 Actual device process termination/reboot/sleep remain untested. The native context provider is injected and not yet wired to the policy repository or live service/UI. State is recovered lazily on commands/status, not by a boot receiver. Morning local-hour behavior is unchanged. See EMERGENCY_ACCESS.md for API/transaction semantics and remaining integration.
+
+## Progress handoff (2026-11-18)
+
+Documentation-only subtask: added HANDOFF.md and a README link. Inspected the code/document inventory, working tree, commit baseline, local branch tracking, and existing APK metadata. Separated implemented independent logic from installed prototype behavior and ordered the remaining tasks behind physical Phase 1 validation. Verification figures are explicitly attributed to the 2026-11-05 preflight, not claimed as new results. Checked relative document links and Git whitespace. No application behavior changed; red/green tests and application suite reruns are not applicable to this documentation update.
