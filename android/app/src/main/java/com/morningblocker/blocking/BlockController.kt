@@ -25,12 +25,7 @@ class BlockController(
         private set
 
     override fun show(block: RestrictionDecision.Blocked): Boolean {
-        val app = when (block.packageName) {
-            "com.instagram.android" -> "Instagram"
-            "com.google.android.youtube" -> "YouTube"
-            "com.reddit.frontpage" -> "Reddit"
-            else -> block.packageName
-        }
+        val app = SupportedApps.labels[block.packageName] ?: block.packageName
         val end = block.session.window.endsAt.toLocalTime().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
         val description = context.getString(R.string.block_description, app, end)
         overlay?.let { root ->

@@ -7,7 +7,30 @@ export type BlockingStatus = {
   error: string | null;
 };
 
+export type SchedulePolicy = {
+  startTime: string;
+  endTime: string;
+  weekdays: number[];
+  packages: string[];
+};
+
+export type ScheduleSnapshot = {
+  policy: SchedulePolicy | null;
+  activeSession: (SchedulePolicy & { date: string }) | null;
+  effectiveFrom: string | null;
+  changesDeferred: boolean;
+  supportedApps: { packageName: string; label: string }[];
+};
+
 export const blocking = {
+  async getScheduleConfiguration(): Promise<ScheduleSnapshot> {
+    return nativeModule().getScheduleConfiguration();
+  },
+  async saveScheduleConfiguration(
+    policy: SchedulePolicy,
+  ): Promise<ScheduleSnapshot> {
+    return nativeModule().saveScheduleConfiguration(policy);
+  },
   async getStatus(): Promise<BlockingStatus> {
     return nativeModule().getStatus();
   },
@@ -17,6 +40,8 @@ export const blocking = {
 };
 
 function nativeModule(): {
+  getScheduleConfiguration(): Promise<ScheduleSnapshot>;
+  saveScheduleConfiguration(policy: SchedulePolicy): Promise<ScheduleSnapshot>;
   getStatus(): Promise<BlockingStatus>;
   openAccessibilitySettings(): Promise<void>;
 } {

@@ -5,6 +5,65 @@ afterEach(() => {
   delete NativeModules.Blocking;
 });
 
+it('forwards configuration reads including effective and editable policy', async () => {
+  const snapshot = {
+    policy: null,
+    activeSession: null,
+    effectiveFrom: null,
+    changesDeferred: false,
+    supportedApps: [],
+  };
+  NativeModules.Blocking = {
+    getScheduleConfiguration: jest.fn().mockResolvedValue(snapshot),
+  };
+  await expect(blocking.getScheduleConfiguration()).resolves.toEqual(snapshot);
+  expect(NativeModules.Blocking.getScheduleConfiguration).toHaveBeenCalledTimes(
+    1,
+  );
+});
+
+it('saves the selected policy without adding JavaScript authorization timestamps', async () => {
+  const policy = {
+    startTime: '06:00',
+    endTime: '09:00',
+    weekdays: [1, 2],
+    packages: ['com.instagram.android'],
+  };
+  const snapshot = {
+    policy,
+    activeSession: null,
+    effectiveFrom: '2026-11-02',
+    changesDeferred: false,
+    supportedApps: [],
+  };
+  NativeModules.Blocking = {
+    saveScheduleConfiguration: jest.fn().mockResolvedValue(snapshot),
+  };
+  await expect(blocking.saveScheduleConfiguration(policy)).resolves.toEqual(
+    snapshot,
+  );
+  expect(NativeModules.Blocking.saveScheduleConfiguration).toHaveBeenCalledWith(
+    policy,
+  );
+});
+
+it('preserves configuration read and save failures', async () => {
+  const error = new Error('Native storage unavailable');
+  NativeModules.Blocking = {
+    getScheduleConfiguration: jest.fn().mockRejectedValue(error),
+    saveScheduleConfiguration: jest.fn().mockRejectedValue(error),
+  };
+  await expect(blocking.getScheduleConfiguration()).rejects.toBe(error);
+  await expect(
+    blocking.saveScheduleConfiguration({
+      startTime: '06:00',
+      endTime: '09:00',
+      weekdays: [],
+      packages: [],
+    }),
+  ).rejects.toBe(error);
+});
+
 it('forwards authoritative status from Kotlin', async () => {
   const status = {
     enabled: true,
