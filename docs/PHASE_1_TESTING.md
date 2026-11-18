@@ -2,7 +2,7 @@
 
 ## Status
 
-Initial physical checks were reported successful by the user on 2026-11-18; see the report below. Full Phase 1 validation remains pending. Automated tests cannot establish whether an accessibility overlay reliably interrupts Instagram on the phone.
+Initial physical checks were reported successful by the user on 2026-11-18; see the report below. The user subsequently accepted Phase 1 as done for now and authorized the next development phase. The development gate is closed by user acceptance; the full reliability matrix remains incomplete. Automated tests cannot establish whether an accessibility overlay reliably interrupts Instagram on the phone.
 
 ### User-reported checks (2026-11-18)
 
@@ -12,7 +12,7 @@ Those groups covered Go Home/Settings/unrelated apps; repeated launcher and rece
 
 These are user-reported results, not independently observed device tests. Actual attempt counts, interruption latency, exact model, Android/One UI and Instagram versions, native status readings, and diagnostic logs were not supplied. The expected device family from the handoff is Samsung A34; the exact model remains unconfirmed. The supplied APK was built on 2026-11-18 from `808e1d1` (application baseline `ed265d4`), SHA-256 `42f4edefe353a9eb1f02cf3dd5aa47eddb4b795f7caa28fa3e60fc81e6e683b6`.
 
-Notification-shade access, notification/deep-link entry counts, split screen/pop-up view, native process termination, force-stop, and reboot remain unconfirmed. The five-group report also does not establish every detailed assertion in the matrix below, such as re-enabling with Instagram already foreground. Keep the full validation milestone open before scheduling or emergency-access integration.
+Notification-shade access, notification/deep-link entry counts, split screen/pop-up view, native process termination, force-stop, and reboot remain unconfirmed. The five-group report also does not establish every detailed assertion in the matrix below, such as re-enabling with Instagram already foreground. These cases are deferred to later reliability verification under the user's explicit acceptance; they are not recorded as passes.
 
 The matrix below retains pending entries until its exact conditions and measurements are recorded; the initial qualitative report above is evidence of progress rather than a complete matrix result.
 

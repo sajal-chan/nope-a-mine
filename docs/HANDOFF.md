@@ -4,11 +4,11 @@ Prepared: 2026-11-18. Code baseline: `ed265d4` (`Persist emergency access state 
 
 ## Start here
 
-The next milestone is **completing physical Phase 1 validation on the user's Samsung A34-family phone**. On 2026-11-18, the user reported successful initial checks of blocking, Home/unrelated apps, repeated launcher/recents entry, UI dismissal, offline use, lock/unlock, and accessibility revocation/re-enabling. Exact device/version details, attempt counts, and remaining lifecycle/multi-window cases are still pending; see PHASE_1_TESTING.md. This user report does not complete the validation milestone.
+The next milestone is **native scheduling integration**. On 2026-11-18, the user reported successful initial checks of blocking, Home/unrelated apps, repeated launcher/recents entry, UI dismissal, offline use, lock/unlock, and accessibility revocation/re-enabling, then explicitly accepted Phase 1 as done for now and authorized proceeding. Exact device/version details, attempt counts, and remaining lifecycle/multi-window cases are still pending for later reliability verification; see PHASE_1_TESTING.md. Acceptance closes the development gate without claiming the full matrix passed.
 
 The installed prototype continuously blocks Instagram (`com.instagram.android`) while its accessibility service is enabled. It has a disclosure/setup screen, native service status, a blocking overlay, Go Home, and an accessibility-settings exit. It does not yet offer schedules, emergency access, app selection, or history.
 
-Scheduling and emergency-access rules have been developed independently while phone testing is deferred. **Complete the device-validation milestone before connecting either feature to live enforcement.** Read [AGENTS.md](../AGENTS.md) before continuing and use [PRODUCT_SPEC.md](PRODUCT_SPEC.md) for full scope.
+Scheduling and emergency-access rules have been developed independently. **The user has authorized scheduling integration after accepting the initial physical checks.** Read [AGENTS.md](../AGENTS.md) before continuing and use [PRODUCT_SPEC.md](PRODUCT_SPEC.md) for full scope.
 
 ## Repository and working agreement
 
@@ -70,7 +70,7 @@ File-reopen and simulated reboot tests are not actual process-kill, device-reboo
 6. **Add local history.** Use Room when implementing session completions, blocked-app attempts, emergency requests/completions, and permission interruptions. No cloud or advanced analytics.
 7. **Run full reliability verification.** Extend Samsung testing to scheduled boundaries, policy edits, time changes, override expiry in the foreground, restart recovery, and the complete offline workflow. Record observed support/limitations. Review current official Android/Google Play requirements and configure distribution signing if distribution becomes a requested deliverable.
 
-Each numbered item contains multiple subtasks: implement and commit one at a time. Integration steps remain gated on physical Phase 1 validation. Independent tests do not remove that gate.
+Each numbered item contains multiple subtasks: implement and commit one at a time. Item 1's initial checks were accepted by the user on 2026-11-18; remaining physical cases are deferred to item 7. Proceed with item 2 under that explicit acceptance.
 
 ## Build and install
 
