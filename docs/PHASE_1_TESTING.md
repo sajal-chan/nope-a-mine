@@ -2,7 +2,19 @@
 
 ## Status
 
-No physical Android device was connected during initial environment inspection. Samsung A34-family physical-device results are **pending**. Automated tests cannot establish whether an accessibility overlay reliably interrupts Instagram on the phone.
+Initial physical checks were reported successful by the user on 2026-11-18; see the report below. Full Phase 1 validation remains pending. Automated tests cannot establish whether an accessibility overlay reliably interrupts Instagram on the phone.
+
+### User-reported checks (2026-11-18)
+
+The user installed the fresh standalone APK supplied in this session and first reported that Instagram was blocked. After receiving five groups of manual checks, the user reported: "i made these checks and everything works."
+
+Those groups covered Go Home/Settings/unrelated apps; repeated launcher and recents entry (20 attempts per route were requested); dismissing Morning Blocker from recents; airplane mode and lock/unlock; and disabling/re-enabling accessibility with blocking stopping/returning. No failures, stuck overlays, or interference were reported. Notification entry was conditional on having a notification and is not confirmed by this general report.
+
+These are user-reported results, not independently observed device tests. Actual attempt counts, interruption latency, exact model, Android/One UI and Instagram versions, native status readings, and diagnostic logs were not supplied. The expected device family from the handoff is Samsung A34; the exact model remains unconfirmed. The supplied APK was built on 2026-11-18 from `808e1d1` (application baseline `ed265d4`), SHA-256 `42f4edefe353a9eb1f02cf3dd5aa47eddb4b795f7caa28fa3e60fc81e6e683b6`.
+
+Notification-shade access, notification/deep-link entry counts, split screen/pop-up view, native process termination, force-stop, and reboot remain unconfirmed. The five-group report also does not establish every detailed assertion in the matrix below, such as re-enabling with Instagram already foreground. Keep the full validation milestone open before scheduling or emergency-access integration.
+
+The matrix below retains pending entries until its exact conditions and measurements are recorded; the initial qualitative report above is evidence of progress rather than a complete matrix result.
 
 Local checks on 2026-10-28: nine Jest tests and eleven native JUnit/Robolectric tests passed; TypeScript, ESLint, standalone ARM64 release build, release vital lint, and APK signature verification passed. See [TDD record](TDD_LOG.md). The APK uses the public debug signing key for local testing.
 

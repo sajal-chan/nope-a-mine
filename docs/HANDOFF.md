@@ -4,7 +4,7 @@ Prepared: 2026-11-18. Code baseline: `ed265d4` (`Persist emergency access state 
 
 ## Start here
 
-The next milestone is **physical Phase 1 validation on the user's Samsung A34-family phone**. No physical-device results have been recorded. The prototype and standalone APK are ready for that testing; a successful build does not establish reliable interruption.
+The next milestone is **completing physical Phase 1 validation on the user's Samsung A34-family phone**. On 2026-11-18, the user reported successful initial checks of blocking, Home/unrelated apps, repeated launcher/recents entry, UI dismissal, offline use, lock/unlock, and accessibility revocation/re-enabling. Exact device/version details, attempt counts, and remaining lifecycle/multi-window cases are still pending; see PHASE_1_TESTING.md. This user report does not complete the validation milestone.
 
 The installed prototype continuously blocks Instagram (`com.instagram.android`) while its accessibility service is enabled. It has a disclosure/setup screen, native service status, a blocking overlay, Go Home, and an accessibility-settings exit. It does not yet offer schedules, emergency access, app selection, or history.
 
@@ -54,7 +54,7 @@ Last preflight: **2026-11-18**, clean app rebuild from `808e1d1`, against the sa
 | Android debug lint | Last run 2026-11-05: zero errors, 18 warnings; not rerun on November 18 |
 | Standalone ARM64 release build and release vital checks | Passed |
 | APK signature verification | Passed |
-| Physical phone testing | Pending; ADB detected no phone on November 18 |
+| Physical phone testing | Initial manual checks reported successful by user on November 18; full matrix pending. No ADB-connected device was observed. |
 
 Jest passed using `--runInBand --watchman=false` after the local Watchman path stalled. PowerShell/npm also dropped the intended Jest argument on that run; use direct Node invocation if this recurs. Bundling subsequently completed. These are local tooling observations, not blocker reliability results.
 
