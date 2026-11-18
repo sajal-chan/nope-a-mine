@@ -58,19 +58,19 @@ export default function SetupScreen(): React.JSX.Element {
     <SafeAreaView style={styles.page}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Morning Blocker</Text>
-        <Text style={styles.heading}>Instagram blocking prototype</Text>
+        <Text style={styles.heading}>Scheduled app blocking</Text>
         <Text style={styles.body}>
-          Instagram stays blocked whenever this accessibility service is
-          enabled, even when this screen is closed. No schedules or emergency
-          access are available in this prototype.
+          Saved schedules control blocking, even when this screen is closed.
+          Without a saved schedule, no apps are blocked. Schedule configuration
+          and emergency access are not available in this build.
         </Text>
         <Text style={styles.heading}>Accessibility access</Text>
         <Text style={styles.body}>
           Morning Blocker uses Android accessibility access to identify the
-          foreground app from window and package metadata and cover Instagram
-          with a blocking screen. It can access window information, but does not
-          read message text, store screen content, or transmit data. Everything
-          runs on your phone.
+          foreground app from window and package metadata and cover selected apps
+          with a blocking screen during their saved schedule. It can access window
+          information, but does not read message text, store screen content, or
+          transmit data. Everything runs on your phone.
         </Text>
         <Text style={styles.body}>
           Enable access only if you agree to this use. You can disable the
@@ -88,9 +88,8 @@ export default function SetupScreen(): React.JSX.Element {
           ) : null}
           {error ? <Text accessibilityRole="alert">{error}</Text> : null}
           <Text style={styles.body}>
-            A connected service still needs testing on this device. Open
-            Instagram to check interruption, then try again after closing this
-            app.
+            A connected service still needs testing on this device. Blocking
+            also requires a saved schedule and selected apps.
           </Text>
           <Button title="Refresh status" onPress={refresh} />
         </View>

@@ -12,6 +12,8 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.morningblocker.R
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 class BlockController(
     private val context: Context,
@@ -22,8 +24,20 @@ class BlockController(
     internal var overlay: View? = null
         private set
 
-    override fun show(): Boolean {
-        if (overlay != null) return true
+    override fun show(block: RestrictionDecision.Blocked): Boolean {
+        val app = when (block.packageName) {
+            "com.instagram.android" -> "Instagram"
+            "com.google.android.youtube" -> "YouTube"
+            "com.reddit.frontpage" -> "Reddit"
+            else -> block.packageName
+        }
+        val end = block.session.window.endsAt.toLocalTime().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
+        val description = context.getString(R.string.block_description, app, end)
+        overlay?.let { root ->
+            val label = root.findViewWithTag<TextView>("block-description")
+            if (label.text.toString() != description) label.text = description
+            return true
+        }
         val content = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -37,7 +51,8 @@ class BlockController(
                 accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             })
             addView(TextView(context).apply {
-                setText(R.string.block_description)
+                tag = "block-description"
+                text = description
                 textSize = 18f
                 setTextColor(Color.rgb(51, 67, 56))
                 gravity = Gravity.CENTER

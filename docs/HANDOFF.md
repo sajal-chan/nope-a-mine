@@ -1,19 +1,19 @@
 # Morning Blocker: development handoff
 
-Prepared: 2026-11-18. Code baseline: `ed265d4` (`Persist emergency access state and add native override clock`). This document records repository inspection and previously completed checks; application tests were not rerun for this documentation update.
+Updated: 2026-11-18. Current source includes native scheduled service integration. The previously supplied standalone APK was built from `808e1d1` (application baseline `ed265d4`) and still has continuous Instagram prototype behavior. See TDD_LOG.md for current source checks and the historical APK checksum.
 
 ## Start here
 
-The next milestone is **native scheduling integration**. On 2026-11-18, the user reported successful initial checks of blocking, Home/unrelated apps, repeated launcher/recents entry, UI dismissal, offline use, lock/unlock, and accessibility revocation/re-enabling, then explicitly accepted Phase 1 as done for now and authorized proceeding. Exact device/version details, attempt counts, and remaining lifecycle/multi-window cases are still pending for later reliability verification; see PHASE_1_TESTING.md. Acceptance closes the development gate without claiming the full matrix passed.
+The next milestone is **schedule configuration through the native bridge and minimal UI**. Native scheduled service integration is implemented: selected packages use the frozen persisted session, with automatic reevaluation and scheduled overlay details. A fresh installation has no blocking until configured; no configuration bridge/UI exists yet. On 2026-11-18 the user accepted initial continuous-prototype phone checks for continued development. Remaining physical cases, including all scheduled-enforcement scenarios, are still pending; see PHASE_1_TESTING.md.
 
-The installed prototype continuously blocks Instagram (`com.instagram.android`) while its accessibility service is enabled. It has a disclosure/setup screen, native service status, a blocking overlay, Go Home, and an accessibility-settings exit. It does not yet offer schedules, emergency access, app selection, or history.
+The APK installed on the user's phone still continuously blocks Instagram (`com.instagram.android`) while enabled. No replacement standalone APK has been produced by the service-integration subtask. Current source switches to saved schedules, with no continuous fallback, and truthfully discloses the missing configuration UI. Emergency access and history are not connected.
 
 Scheduling and emergency-access rules have been developed independently. **The user has authorized scheduling integration after accepting the initial physical checks.** Read [AGENTS.md](../AGENTS.md) before continuing and use [PRODUCT_SPEC.md](PRODUCT_SPEC.md) for full scope.
 
 ## Repository and working agreement
 
 - Workspace: `E:\nope-a-mine`; remote: https://github.com/sajal-chan/nope-a-mine.
-- Default/development branch: `dev`; preserve it. At inspection, it was ten commits ahead of the locally recorded `origin/dev`, before this documentation commit. Remote state was not fetched or changed.
+- Default/development branch: `dev`; preserve it. The user requested publishing earlier work to `main`, which was verified at `5e3d0be`; remote `dev` was not advanced. This service-integration subtask is local until another push is requested.
 - Work one subtask at a time. Explain behavior cases, write and run failing tests, implement to green, then refactor. Record evidence in [TDD_LOG.md](TDD_LOG.md).
 - Make a local commit for each completed subtask. Do not push unless requested. Ask the user when a product decision is needed.
 - `.serena/` is unrelated, untracked workspace data; leave it alone.
@@ -23,12 +23,12 @@ Scheduling and emergency-access rules have been developed independently. **The u
 | Area | Implemented | Remaining boundary |
 | --- | --- | --- |
 | Android scaffold | React Native 0.84.1, React 19.2.3, TypeScript, Kotlin, Android-only app | No iOS scope |
-| Native prototype | Accessibility foreground monitoring, Instagram interruption through an accessibility overlay, native status bridge, service cleanup and bounded detection/presentation retries | Reliability on the Samsung is unvalidated |
+| Native service | Accessibility foreground monitoring, asynchronous scheduled decisions, native status/errors, cancellation/reconnection guards, periodic clock/boundary checks and bounded fast recovery | Physical scheduled-enforcement reliability remains unvalidated; no wake alarms/boot receiver |
 | Setup screen | Disclosure, explicit agreement/settings action, connected/enabled/error status, refresh on app return | Full onboarding/dashboard later |
-| Schedule rules | Local start/end, weekdays, package identifiers, boundaries and next session | No live schedule enforcement or configuration UI |
-| Native restriction decisions | RestrictionEngine evaluates persisted frozen sessions with fresh local time, selected packages, end times, unknown foreground and surfaced failures; 17 new tests | Service/gate still use the continuous Instagram prototype; asynchronous scheduling integration is next |
-| Policy persistence | Atomic Preferences DataStore, validation, frozen active-session policy, deferred edits, file-reopen tests | No schedule bridge or enforcement wiring |
-| Morning clock handling | Current local hours/time zone, immediate first setup inside the window, rollback/re-entry with frozen policy, retirement of old duration checkpoints | No boot/time-change receiver or live scheduling lifecycle |
+| Schedule rules | Local start/end, weekdays, package identifiers, boundaries and next session | Configuration bridge/UI pending |
+| Native restriction decisions | RestrictionEngine uses persisted frozen sessions; service/gate consume decisions and overlay shows actual app/unlock time | Configuration bridge/UI and emergency integration pending |
+| Policy persistence | Atomic Preferences DataStore, validation, frozen active-session policy, deferred edits, file-reopen tests; shared repository now used by service | No schedule bridge |
+| Morning clock handling | Fresh local hours/zone on native callbacks, start/end while app stays foreground, rollback/re-entry and delayed-response/known-overlay expiry guards | No boot/time-change receiver or wake alarm; physical lifecycle testing pending |
 | Emergency rules | Fixed 60-second wait, explicit confirmation, up to five minutes of access, one completed override per session, cancellation, expiry, session caps and reboot rules | No user-facing emergency workflow |
 | Emergency persistence | Atomic commands, fixed deadlines across file reopening, concurrent-command tests, consumed-session ledger, corruption/IO handling, native elapsed-time/boot reader | Trusted policy context provider, UI/bridge, and enforcement integration pending |
 
@@ -44,7 +44,9 @@ Scheduling and emergency-access rules have been developed independently. **The u
 
 ## Verification available at handoff
 
-Last preflight: **2026-11-18**, clean app rebuild from `808e1d1`, against the same application code baseline. See the latest TDD_LOG.md entry for the APK checksum and exact commands.
+Current source checks: **214 native tests and 9 Jest tests pass**, TypeScript/ESLint pass, ARM64 debug build passes, and Android debug lint has zero errors/18 warnings. No standalone release was rebuilt for the scheduling change. See the latest TDD_LOG.md entry for red/green evidence.
+
+The following table describes the **earlier standalone prototype preflight** on 2026-11-18 from `808e1d1`; its results do not validate scheduled enforcement. See its TDD_LOG.md entry for the APK checksum.
 
 | Check | Recorded result |
 | --- | --- |
@@ -64,7 +66,7 @@ File-reopen and simulated reboot tests are not actual process-kill, device-reboo
 ## Next tasks, in order
 
 1. **Phase 1 accepted for continued development.** Initial manual checks were reported successful and accepted by the user on 2026-11-18. Remaining device/version details, measurements and lifecycle cases in [PHASE_1_TESTING.md](PHASE_1_TESTING.md) are deferred to the broader reliability phase, not claimed as passing.
-2. **Connect native scheduling.** The repository-backed RestrictionEngine decision adapter is implemented and tested (189 native tests now pass; debug lint/build pass). Next make the service and foreground gate consume asynchronous decisions, replacing the hardcoded Instagram gate. Handle start/end while an app is already foreground, service startup/reconnection, clock/time-zone changes, and reboot where Android permits. Preserve unknown-foreground behavior, report policy/permission failures, and update overlay details from the frozen session. Never drive enforcement directly from `load()`/`policies`, which may expose future configuration. See the latest TDD_LOG.md entry; the release APK/preflight table above still describes the earlier prototype build.
+2. **Add schedule configuration.** The native service/gate integration is complete and tested, including selected apps, no configured session, foreground start/end, clock/zone changes, frozen pending edits, slow IO/navigation, cancellation/reconnection and dynamic overlay details. Next expose validated native configuration operations using fresh native time, then add minimal supported-app/weekday/start/end controls and explain deferred edits. Never drive enforcement directly from `load()`/`policies`, which may expose future configuration. After configuration is usable, produce a new standalone APK and test actual scheduled boundaries on the phone, including a selected app already foreground. Battery impact, sleep/reboot/force-stop behavior and manufacturer reliability remain physical verification work.
 3. **Supply the trusted emergency context.** Tie each command to the persisted frozen native session identity, fresh elapsed time/boot identity, and current remaining morning bound. Test genuine session rollover, clock re-entry, reopen, concurrent operations, and failures without resetting used allowances. Review coordination between the separate policy and emergency stores.
 4. **Connect the emergency workflow and enforcement.** Add native bridge operations and minimal request/countdown/confirm/cancel presentation. Kotlin remains authoritative. Ensure native re-evaluation resumes blocking at expiry even if a restricted app stays foreground and the React Native UI is closed. Validate real reboot/process-death behavior and session-end caps.
 5. **Build the minimal product UI.** Add navigation as needed, onboarding/permission status, supported-app selection (Instagram, YouTube, Reddit), schedule editing, and a dashboard showing native state, today's window, selected apps, remaining time, and next session. Keep enforcement-unavailable states explicit.
@@ -95,7 +97,7 @@ For a standalone build with bundled JavaScript, from `android`:
 & "$env:ANDROID_HOME\platform-tools\adb.exe" install -r app/build/outputs/apk/release/app-release.apk
 ```
 
-Enable USB debugging and accept the phone's authorization prompt. Open Morning Blocker, review/agree to the disclosure, enable its accessibility service through Android settings, return and verify **Service connected**, then follow the test matrix. Disable the service to stop continuous prototype blocking. The release APK uses the public debug key for local testing; production signing is not configured.
+For ADB installation, enable USB debugging and accept the phone's authorization prompt; direct APK transfer/install is also possible without a laptop. Open Morning Blocker, review/agree to the disclosure, enable its accessibility service through Android settings, and return to verify **Service connected**. The old supplied APK uses continuous Instagram blocking; current source needs a saved schedule and has no configuration UI yet. Disable the service to stop enforcement. The release APK uses the public debug key for local testing; production signing is not configured.
 
 For interactive development, use `npm start` and `npm run android` in separate root terminals. Debug setup needs Metro; use `adb reverse tcp:8081 tcp:8081` when needed. The standalone build needs no Metro. This repository uses the React Native CLI and custom Kotlin code, so Expo Go QR scanning is not the installation workflow.
 

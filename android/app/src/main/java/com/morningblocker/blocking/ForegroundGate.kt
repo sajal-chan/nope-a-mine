@@ -1,29 +1,39 @@
 package com.morningblocker.blocking
 
 interface BlockingSurface {
-    fun show(): Boolean
+    fun show(block: RestrictionDecision.Blocked): Boolean
     fun hide()
 }
 
-/** Phase 1 only: no schedule, persistence, or JavaScript dependency. Main-thread confined. */
+/** Applies native policy decisions on the service's main thread. */
 class ForegroundGate(private val surface: BlockingSurface) {
-    var isBlocking = false
+    var displayedBlock: RestrictionDecision.Blocked? = null
         private set
+    val isBlocking: Boolean get() = displayedBlock != null
 
-    /** False means the snapshot or presentation is unresolved and may need retrying. */
-    fun onForegroundApp(packageName: String?): Boolean {
-        if (packageName.isNullOrBlank()) return false
-        return if (packageName == "com.instagram.android") {
-            if (!isBlocking) isBlocking = surface.show()
-            isBlocking
-        } else {
+    /** False means foreground detection or presentation needs recovery. */
+    fun applyDecision(decision: RestrictionDecision): Boolean = when (decision) {
+        RestrictionDecision.Inactive, is RestrictionDecision.Allowed -> {
             close()
             true
+        }
+        is RestrictionDecision.UnknownForeground -> false
+        is RestrictionDecision.Blocked -> {
+            val previous = displayedBlock
+            if (previous?.packageName == decision.packageName && previous.session.window == decision.session.window) {
+                true
+            } else if (surface.show(decision)) {
+                displayedBlock = decision
+                true
+            } else {
+                close()
+                false
+            }
         }
     }
 
     fun close() {
         if (isBlocking) surface.hide()
-        isBlocking = false
+        displayedBlock = null
     }
 }

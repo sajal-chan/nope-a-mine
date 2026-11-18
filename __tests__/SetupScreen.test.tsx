@@ -44,7 +44,9 @@ it('discloses access and requires explicit consent before opening settings', asy
     tree = create(<App />);
   });
   expect(text()).toContain('foreground app');
-  expect(text()).toContain('No schedules or emergency access');
+  expect(text()).toContain('Saved schedules control blocking');
+  expect(text()).toContain('Without a saved schedule, no apps are blocked');
+  expect(text()).not.toContain('Instagram stays blocked whenever');
   expect(openSettings).not.toHaveBeenCalled();
   await act(async () =>
     button('I agree — open accessibility settings').props.onPress(),
