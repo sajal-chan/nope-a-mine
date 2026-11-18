@@ -22,7 +22,7 @@ Follow-up recovery checks: the native suite now contains eighteen passing tests.
 
 ## Setup
 
-These setup/matrix instructions describe the continuous Instagram prototype APK supplied on November 18. Current source has since switched to persisted scheduled enforcement: no saved configuration means no blocking, and the configuration bridge/UI is not implemented yet. The old APK has not been replaced by this source change. Physical scheduled-enforcement testing will follow configuration UI and a new standalone build; the accepted prototype checks do not validate that newer behavior.
+These setup/matrix instructions describe the continuous Instagram prototype APK supplied earlier on November 18. The new version `1.1-scheduling` includes persisted scheduled enforcement and configuration UI: no saved configuration means no blocking. Follow [SCHEDULING_TESTING.md](SCHEDULING_TESTING.md) to install and test that new standalone APK. Installation/physical scheduled results are pending; the accepted prototype checks do not validate the new behavior.
 
 1. Record exact phone model, Android version, One UI version, Instagram version, and build/commit under test. Find OS details in Settings → About phone → Software information.
 2. Enable Developer options and USB debugging. Connect a data-capable USB cable and accept the phone's debugging prompt.
