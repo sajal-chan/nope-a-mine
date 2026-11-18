@@ -5,7 +5,12 @@ import App from '../App';
 import { blocking } from '../src/native/BlockingModule';
 
 jest.mock('../src/native/BlockingModule', () => ({
-  blocking: { getStatus: jest.fn(), openAccessibilitySettings: jest.fn() },
+  blocking: {
+    getStatus: jest.fn(),
+    openAccessibilitySettings: jest.fn(),
+    getScheduleConfiguration: jest.fn(),
+    saveScheduleConfiguration: jest.fn(),
+  },
 }));
 
 const status = jest.mocked(blocking.getStatus);
@@ -31,6 +36,15 @@ beforeEach(() => {
     error: null,
   });
   openSettings.mockResolvedValue(undefined);
+  jest
+    .mocked(blocking.getScheduleConfiguration)
+    .mockResolvedValue({
+      policy: null,
+      activeSession: null,
+      effectiveFrom: null,
+      changesDeferred: false,
+      supportedApps: [],
+    });
 });
 afterEach(async () => {
   if (tree) {
@@ -68,12 +82,12 @@ it('distinguishes enabled permission from a connected service', async () => {
 });
 
 it('refreshes native status when returning from Android settings', async () => {
-  let listener: (state: AppStateStatus) => void = () => {};
+  const listeners: ((state: AppStateStatus) => void)[] = [];
   const remove = jest.fn();
   jest
     .spyOn(AppState, 'addEventListener')
     .mockImplementation((_event, callback) => {
-      listener = callback;
+      listeners.push(callback);
       return { remove };
     });
   await act(async () => {
@@ -85,7 +99,7 @@ it('refreshes native status when returning from Android settings', async () => {
     blocking: false,
     error: null,
   });
-  await act(async () => listener('active'));
+  await act(async () => listeners.forEach(listener => listener('active')));
   expect(text()).toContain('Service connected');
   await act(async () => tree.unmount());
   expect(remove).toHaveBeenCalled();

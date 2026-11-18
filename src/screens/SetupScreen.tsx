@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { blocking, BlockingStatus } from '../native/BlockingModule';
+import ScheduleSettings from './ScheduleSettings';
 
 const message = (error: unknown) =>
   error instanceof Error ? error.message : 'Native operation failed';
@@ -56,21 +57,24 @@ export default function SetupScreen(): React.JSX.Element {
 
   return (
     <SafeAreaView style={styles.page}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.title}>Morning Blocker</Text>
         <Text style={styles.heading}>Scheduled app blocking</Text>
         <Text style={styles.body}>
           Saved schedules control blocking, even when this screen is closed.
-          Without a saved schedule, no apps are blocked. Schedule configuration
-          and emergency access are not available in this build.
+          Without a saved schedule, no apps are blocked. Choose your apps and
+          schedule below. Emergency access is not available in this build.
         </Text>
         <Text style={styles.heading}>Accessibility access</Text>
         <Text style={styles.body}>
           Morning Blocker uses Android accessibility access to identify the
-          foreground app from window and package metadata and cover selected apps
-          with a blocking screen during their saved schedule. It can access window
-          information, but does not read message text, store screen content, or
-          transmit data. Everything runs on your phone.
+          foreground app from window and package metadata and cover selected
+          apps with a blocking screen during their saved schedule. It can access
+          window information, but does not read message text, store screen
+          content, or transmit data. Everything runs on your phone.
         </Text>
         <Text style={styles.body}>
           Enable access only if you agree to this use. You can disable the
@@ -93,6 +97,7 @@ export default function SetupScreen(): React.JSX.Element {
           </Text>
           <Button title="Refresh status" onPress={refresh} />
         </View>
+        <ScheduleSettings />
       </ScrollView>
     </SafeAreaView>
   );
