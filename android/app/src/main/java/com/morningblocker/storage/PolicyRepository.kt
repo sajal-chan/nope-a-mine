@@ -22,22 +22,37 @@ class PolicyRepository(private val store: DataStore<Preferences>) {
 
     suspend fun load(): BlockingPolicy? = policies.first()
 
-    suspend fun activeSessionAt(now: ClockReading): RestrictionSession? {
+    suspend fun activeSessionAt(now: ClockReading): RestrictionSession? = configurationAt(now).activeSession
+
+    suspend fun configurationAt(now: ClockReading): PolicyConfiguration {
         val updated = store.edit { preferences ->
             val resolved = recoverState(decodeState(preferences), now)
             writeSnapshot(preferences, resolved)
         }
-        val state = decodeState(updated)
+        return configuration(decodeState(updated), now)
+    }
+
+    private fun configuration(state: SavedState, now: ClockReading): PolicyConfiguration {
         val local = now.instant.atZone(now.zone).toLocalDateTime()
-        val frozen = state.session ?: return null
-        if (local.toLocalDate().isAfter(frozen.date)) return null
+        val frozen = state.session
         // Re-entry after a clock rollback uses the same frozen policy, not pending edits.
-        if (ScheduleRules.activeSession(frozen.policy.schedule, local) == null) return null
-        return RestrictionSession(local.toLocalDate(), frozen.policy)
+        val active = if (frozen != null && !local.toLocalDate().isAfter(frozen.date) &&
+            ScheduleRules.activeSession(frozen.policy.schedule, local) != null) {
+            RestrictionSession(local.toLocalDate(), frozen.policy)
+        } else null
+        return PolicyConfiguration(
+            state.policy, active,
+            if (state.policy == null) null else state.effectiveFrom.takeUnless { it == LocalDate.MIN } ?: local.toLocalDate(),
+            state.policy != null && state.effectiveFrom.isAfter(local.toLocalDate()),
+        )
     }
 
     suspend fun save(policy: BlockingPolicy, now: ClockReading) {
-        store.edit { preferences ->
+        saveConfiguration(policy, now)
+    }
+
+    suspend fun saveConfiguration(policy: BlockingPolicy, now: ClockReading): PolicyConfiguration {
+        val updated = store.edit { preferences ->
             // Capture the old policy first, even if this edit is the first operation in its window.
             val state = recoverState(decodeState(preferences), now)
             val today = now.instant.atZone(now.zone).toLocalDate()
@@ -47,7 +62,10 @@ class PolicyRepository(private val store: DataStore<Preferences>) {
             writePolicy(preferences, ROOT, policy)
             preferences[EFFECTIVE_FROM] = effectiveFrom.toString()
             writeSnapshot(preferences, state)
+            // First-time in-window setup becomes active in this same committed view.
+            writeSnapshot(preferences, recoverState(decodeState(preferences), now))
         }
+        return configuration(decodeState(updated), now)
     }
 
     private data class SavedState(
