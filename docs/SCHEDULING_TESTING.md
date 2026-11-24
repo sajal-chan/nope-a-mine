@@ -1,8 +1,12 @@
 # Scheduled-blocking phone test — 1.1-scheduling
 
-## Installation checkpoint
+## Checkpoint disposition (2026-11-24)
 
-This is the next user-performed checkpoint. Automated native/JS tests and a standalone build do not establish actual scheduled enforcement on the phone. No results for this build have been observed on a physical device yet.
+The user reported having tested, without identifying the APK, phone/OS version or individual scenarios, and explicitly chose to continue development and focus on device testing when a specific test blocks further progress. This is a user-reported general test and a decision to defer the remaining checkpoint details; it is not a pass for any specific scheduled-build scenario below. No scheduled-build physical results have been directly observed by the agent. Automated tests and a standalone build do not establish phone reliability.
+
+The coordinator verified the local APK SHA-256 still matches the value below; `adb devices -l` showed no connected device and no installation was performed. The artifact used in the user's testing is unknown. Keep the following sequence available for a concrete development blocker and the later reliability phase; record actual device, version and scenario results when available.
+
+## Installation and test preparation
 
 - Application source: `cd6a27c`.
 - Android package: `com.morningblocker`; versionCode **2**, versionName **1.1-scheduling**.

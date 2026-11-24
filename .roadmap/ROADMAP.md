@@ -2,19 +2,19 @@
 
 <!-- Generated from roadmap.json. JSON is authoritative; regenerate this view after JSON changes. -->
 
-Revision: 1 | Status: proposed; awaiting user approval
+Revision: 1 | Status: approved for task execution (2026-11-24)
 
 [Design](DESIGN.md) | [Authoritative task data](roadmap.json)
 
-This plan covers the remaining MVP. The existing scaffold, scheduled blocking/configuration, and emergency rules/storage are already implemented. Physical scheduled-device validation remains pending.
+This plan covers the remaining MVP. Existing scaffold, scheduling/configuration, and emergency rules/storage are implemented. The user reported general testing and explicitly deferred remaining scheduled-phone checkpoint details; no unspecified scenario is marked passed.
 
-Plan approval does not waive the phone checkpoint or authorize pushes. The 20 local commits ahead of origin/dev must be preserved and reconciled before PR delivery. Work remains sequential, with TDD and one local commit per completed subtask.
+Task-branch pushes and one PR per task are authorized; only the user merges. The existing 20 local commits ahead of origin/dev must be preserved and their baseline integration resolved before PR delivery. Work remains sequential, with TDD and a local commit per completed subtask.
 
 ## Sequence
 
 | Order | Task | Dependencies | Status |
 | --- | --- | --- | --- |
-| 1 | [TASK-001: Resolve the scheduled-blocking physical checkpoint](#task-001) | None | pending |
+| 1 | [TASK-001: Resolve the scheduled-blocking physical checkpoint](#task-001) | None | implementing |
 | 2 | [TASK-002: Verify Android contracts for the remaining integration](#task-002) | TASK-001 | pending |
 | 3 | [TASK-003: Persist an immutable native session identity](#task-003) | TASK-002 | pending |
 | 4 | [TASK-004: Connect trusted emergency context across native stores](#task-004) | TASK-003 | pending |

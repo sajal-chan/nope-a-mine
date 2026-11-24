@@ -1,9 +1,19 @@
 {
   "revision": 1,
-  "approval": null,
+  "approval": {
+    "revision": 1,
+    "human_confirmation": "okay, go ahead and start with the task implementation",
+    "confirmed_on": "2026-11-24",
+    "approved_documents": [
+      ".roadmap/DESIGN.md",
+      ".roadmap/roadmap.json"
+    ],
+    "reviewed_planning_commit": "01805125d7d701a546c746f355251025b5c1f13d",
+    "approved_on": "2026-11-24"
+  },
   "project": "Morning Blocker",
   "target_branch": "dev",
-  "planning_scope": "Remaining MVP only; no application implementation is authorized by this proposed revision.",
+  "planning_scope": "Remaining MVP only; revision 1 approved for task execution. Physical evidence and publication authority remain separately tracked.",
   "source_baseline": {
     "local_dev": "ec8193268be0e144f3bdbd21ee0ea6edd7c3f2b3",
     "origin_dev": "c415df0eb40bbf5e43a2d3ba5aaa45ada8095be0",
@@ -44,7 +54,7 @@
     "tdd": "Explain cases; run failing behavior test before implementation; minimal green implementation/refactor; record exact red/green in docs/TDD_LOG.md; local commit per completed subtask. Documentation/manual gates use appropriate static/manual evidence.",
     "delivery": "No push/PR publication is authorized by roadmap preparation. Reconcile local-only baseline and receive publication/integration authorization first; no reset/force-push/protection/default-branch change.",
     "integration": "Use real independent review and provider integration evidence under the selected workflow. User merges; never mark existing local work or future tasks merged from local commits alone.",
-    "unavailable_device": "Keep the physical task pending/blocked with the missing evidence stated; do not substitute unit tests or silently waive the gate.",
+    "unavailable_device": "Keep physical evidence unverified when unavailable; continue only under explicit task-gate deferral. Raise concrete development-blocking device uncertainty when necessary and preserve later reliability checks.",
     "requirements_changes": "Pause affected scope and request an approved revision when a finding changes product/architecture contracts."
   },
   "delivery_prerequisites": [
@@ -55,13 +65,13 @@
     },
     {
       "id": "PREREQ-APPROVAL",
-      "status": "unresolved",
-      "description": "Human review/approval of design and roadmap revision 1; approval remains null."
+      "status": "resolved",
+      "description": "User approved both revision-1 design and roadmap by directing implementation on 2026-11-24; exact confirmation is recorded in approval."
     },
     {
       "id": "PREREQ-PUBLISH",
-      "status": "unresolved",
-      "description": "Explicit authorization for any needed push/PR publication. Local planning commit may be handled by coordinator on docs/roadmap-adoption; this is not remote integration."
+      "status": "resolved",
+      "description": "User explicitly authorized following roadmap skill delivery instructions on 2026-11-24; task-branch pushes/PRs authorized, merges and baseline aggregation not authorized."
     }
   ],
   "test_commands": {
@@ -93,10 +103,23 @@
         "Commit only actual test records/decisions; no manufactured TDD red for manual evidence."
       ],
       "rollback": "Revert only inaccurate documentation; preserve raw observations and pending cases. Do not clear app data or reinstall to conceal a failure.",
-      "status": "pending",
+      "status": "implementing",
       "fix_cycles": 0,
-      "evidence": {},
-      "history": []
+      "evidence": {
+        "started_on": "2026-11-24",
+        "scope": "Document user report and explicit continuation decision; do not fabricate physical passes."
+      },
+      "history": [
+        {
+          "from": "pending",
+          "to": "implementing",
+          "evidence": {
+            "started_on": "2026-11-24",
+            "scope": "Document user report and explicit continuation decision; do not fabricate physical passes."
+          },
+          "revision": 1
+        }
+      ]
     },
     {
       "id": "TASK-002",
@@ -548,5 +571,19 @@
       "evidence": {},
       "history": []
     }
-  ]
+  ],
+  "checkpoint_decisions": [
+    {
+      "task": "TASK-001",
+      "date": "2026-11-24",
+      "user_report": "yes i have tested. i dont currently know the version and all",
+      "continuation_decision": "i think we can focus on developement for now. i want to focus on testing when there is a blocking testing left that we cant move ahead without certain testing",
+      "interpretation": "User-reported testing without exact build/device/scenario details; explicit authorization to defer remaining scheduled-phone checkpoint details and proceed with development. No unconfirmed scenario is marked passed."
+    }
+  ],
+  "delivery_authorization": {
+    "date": "2026-11-24",
+    "human_confirmation": "you can follow the roadmap skill instructions",
+    "scope": "Publish roadmap task branches and create one PR per task; only the user merges. Existing local-baseline integration remains a separate unresolved decision."
+  }
 }

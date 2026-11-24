@@ -1,12 +1,12 @@
 # Design
 Revision: 1
-Status: proposed
+Status: approved for task execution (user confirmation 2026-11-24)
 
 ## Problem and objectives
 
-Complete the remaining Android-only, offline Morning Blocker MVP from the existing working application. Preserve native enforcement without React Native, frozen session policies, current-local-hours scheduling, and the existing persisted emergency state machine. This is a proposal for review, not development approval or a claim of device validation.
+Complete the remaining Android-only, offline Morning Blocker MVP from the existing working application. Preserve native enforcement without React Native, frozen session policies, current-local-hours scheduling, and the existing persisted emergency state machine. Revision 1 was approved for task execution on 2026-11-24. Approval is not a claim of device validation.
 
-The immediate physical checkpoint is the 1.1-scheduling APK in docs/SCHEDULING_TESTING.md. The prior user instruction stopped development at its installation checkpoint. Roadmap preparation does not waive that checkpoint. Complete its checks and review findings, or obtain an explicit user decision to defer that gate, before starting emergency integration. The 2026-11-18 acceptance of initial continuous-prototype checks remains valid; its unconfirmed cases stay deferred rather than being relabeled as failures or passes.
+The scheduled physical checkpoint is the 1.1-scheduling APK in docs/SCHEDULING_TESTING.md. On 2026-11-24 the user reported general testing without exact build/device details and explicitly directed development to continue, deferring remaining checkpoint details. This resolves the continuation gate without identifying the tested artifact or marking any unconfirmed scenario passed. Raise a device check when a concrete development blocker requires it; retain the later reliability matrix. The 2026-11-18 acceptance of initial continuous-prototype checks remains valid; its unconfirmed cases stay deferred rather than being relabeled as failures or passes.
 
 ## Requirements and non-goals
 
@@ -96,7 +96,7 @@ Planning baseline supplied by coordinator: local dev ec8193268be0e144f3bdbd21ee0
 
 Before PR-based implementation delivery, reconcile the exact local commit list and obtain explicit user choice/authorization for integrating the existing local baseline with origin/dev and publishing task branches. Do not reset, drop, squash, force-push, repoint default branch, alter protections, or publish automatically. A branch from stale origin/dev would omit implemented scheduling/emergency prerequisites. Keep .serena untouched. Baseline capture/checks and roadmap approval are coordinator prerequisites, not fictional completed roadmap tasks.
 
-This revision has approval null and every remaining task pending, fix_cycles 0 and empty evidence/history. No task is implementation-eligible until the user approves design and roadmap; the scheduled-phone gate must also be satisfied or explicitly deferred. PR creation/pushing still require authorization. Keep local commits per repository rules; task integration/merge evidence must be real, and only the user merges under the selected skill.
+This revision has user approval recorded in roadmap.json. Task status and evidence are authoritative there. The user explicitly deferred the remaining scheduled-phone checkpoint details on 2026-11-24; no unconfirmed device result is marked passed. The user separately authorized task-branch pushes and PR creation through the skill on 2026-11-24; baseline integration remains unresolved. Keep local commits per repository rules; task integration/merge evidence must be real, and only the user merges under the selected skill.
 
 Additive/versioned migrations preserve schedule, frozen identity and emergency consumed usage. Test migration and interrupted writes before installing upgraded artifacts. No destructive clearing on failures. Reverting application commits does not automatically downgrade new persistence schemas: keep forward-compatible readers where practical, otherwise prepare a tested data-preserving forward fix. History schema downgrades never use destructive migration fallback; do not uninstall/clear data as routine rollback.
 
@@ -104,7 +104,7 @@ Roll out local standalone APKs at scheduled, emergency and final checkpoints wit
 
 ## Risks and unresolved questions
 
-- Scheduled APK phone checkpoint remains pending; approval of this plan alone is not a waiver.
+- Scheduled APK test details remain unverified. The separate 2026-11-24 user continuation decision defers this gate; preserve later reliability checks and raise concrete blocking device uncertainties when necessary.
 - Exact supported phone model/Android/One UI and installed target versions remain unconfirmed. Proposed final evidence target is the user's actual Samsung device; additional OS/manufacturer support requires measured evidence.
 - Baseline publication/integration is unresolved; no push/PR authority is inferred from planning.
 - Native identity semantics across cross-date rollback/zone changes and legacy migration must be settled in TASK-003 without refreshing allowance. If solving it changes accepted product semantics, request a design revision.
