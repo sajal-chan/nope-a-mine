@@ -1,0 +1,8 @@
+<resources>
+    <string name="block_title">Not right now.</string>
+    <string name="block_description">%1$s is blocked until %2$s.</string>
+    <string name="go_home">Go Home</string>
+    <string name="accessibility_settings">Accessibility settings</string>
+    <string name="accessibility_description">Morning Blocker uses accessibility window and package information to identify selected apps and display a blocking screen during their saved schedule. It does not read message text, store screen content, or transmit data. Disable it here at any time.</string>
+    <string name="app_name">Morning Blocker</string>
+</resources>

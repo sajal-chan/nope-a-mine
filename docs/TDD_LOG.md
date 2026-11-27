@@ -1,0 +1,259 @@
+# TDD record
+
+Use red → green → refactor for every behavior change. Generated framework/build scaffolding is infrastructure; application behavior starts with a failing test. Tests do not substitute for physical-device enforcement validation.
+
+Historical entries reflect requirements at their commits. The confirmed local-hours change below supersedes the earlier provisional duration-preserving morning clock policy.
+
+## Phase 1
+
+- Native gate tests written before implementation: Instagram matching, repeated-event deduplication, unrelated-app access, leaving/reopening, unknown foreground, presentation failure/retry, and cleanup.
+- Native overlay tests written before implementation: touch interception and window type, focus flags, duplicate presentation, Home behavior, and settings access.
+- Setup-screen tests written before implementation: disclosure and explicit consent, enabled versus connected, refresh after returning from settings, and failure reporting.
+
+### Executed on 2026-10-28
+
+1. **Red (setup screen):** five executable tests failed against an empty `App`, with missing disclosure, status, refresh, and settings controls. The earlier initial run also failed module resolution before the skeleton existed.
+2. **Red (TypeScript bridge):** four tests failed against throwing bridge stubs: status forwarding, settings forwarding, missing-module reporting, and preservation of native failures.
+3. **Red (native):** `:app:testDebugUnitTest` failed at `compileDebugUnitTestKotlin` because `ForegroundGate`, `BlockingSurface`, `BlockController`, and `AppMonitorService` did not exist. This was a compile-time red, not an executed assertion failure.
+4. **Green:** implemented the native components and React Native setup/bridge; corrected safe-area and AppState test mocks. Nine Jest tests passed. Eleven native tests passed: six pure gate tests, three Robolectric overlay tests, and two Robolectric service tests. No native tests skipped.
+5. **Refactor/checks:** formatted TypeScript, normalized the generated Kotlin source paths, removed iOS-only scaffold files, and separated the debug-only network permission. TypeScript and ESLint passed. `:app:assembleRelease` and its release vital lint checks passed for `arm64-v8a`; APK signing verification passed.
+
+Environment: React Native 0.84.1, React 19.2.3, TypeScript, JDK 17, SDK/Build Tools 36, NDK 27.1.12297006. Node 22.23.4 was downloaded for tooling without changing the system Node installation. The initial dependency install used system Node 22.12; the final direct Jest check used Node 22.23.4.
+
+Final Jest run: two suites, nine tests, zero failures. Native JUnit XML reports: three suites, eleven tests, zero failures/errors/skips. The standalone APK is generated at `android/app/build/outputs/apk/release/app-release.apk` and intentionally remains ignored by Git.
+
+Physical Samsung validation is pending; `adb devices -l` listed no attached device. Robolectric simulates Android APIs and cannot establish actual foreground detection, touch interception, OEM lifecycle reliability, or runtime React Native bridge behavior on the phone. The device matrix in `PHASE_1_TESTING.md` remains open. Scheduling and emergency access have not been started.
+
+### Phase 1 follow-up — transient failure recovery (2026-10-28)
+
+Inspection found that the original service made one delayed check and stopped if foreground identification or overlay presentation was still unavailable. Recovery then depended on a new Android event.
+
+1. **Red:** added seven service regression tests before changing production code. The service suite executed nine tests, with four assertion failures: late foreground snapshot, temporary presentation failure, temporary read failure, and multiple bounded recovery attempts. Existing behavior already passed navigation cleanup, unbind cancellation, and interrupt handling checks.
+2. **Green:** the gate now reports whether an observation is resolved. The service retries unresolved observations/presentation with delays of 100, 250, 500, and 1,000 ms, stopping after the budget is exhausted. A new relevant event or service connection starts a fresh budget. Existing 250 ms monitoring continues while an overlay is displayed. Recovered detection errors are cleared without discarding unrelated native errors.
+3. **Verification:** the full native suite passed all eighteen tests: six gate, three overlay, and nine service tests, with zero failures/errors/skips. The standalone ARM64 APK rebuild and release vital lint checks passed.
+
+No JavaScript behavior or dependencies changed. Physical-device testing remains pending; these tests simulate lifecycle and timing through Robolectric and a fake foreground reader/presentation surface.
+
+## Phase 2, subtask 1 — pure schedule rules (2026-10-29)
+
+The user authorized isolated schedule-rule development while Samsung validation is deferred, with cases explained before development and a local commit for each completed subtask. The rules are not connected to the accessibility service or React Native bridge.
+
+Cases covered by twenty-one tests:
+
+- Inclusive start, active interior, immediately before end, exclusive end, immediately before start, and after end.
+- Unselected weekdays; each of the seven weekdays independently; empty weekdays disabling active and upcoming sessions.
+- Rejecting equal times and overnight windows; allowing a valid window to start at midnight.
+- Next session before today's start, exactly at start, during a current session, at end, and after end on a daily schedule.
+- Choosing the closest eligible weekday irrespective of set order; next-week/month and year rollover.
+- Copying the caller's mutable weekday set so later input mutation cannot change the schedule.
+
+**Red:** all twenty-one tests executed against compileable stubs. Sixteen assertion failures established missing boundary evaluation, validation, upcoming-session calculation, and defensive copying. Five inactive-result cases already passed against null-returning stubs.
+
+**Green:** implemented immutable `MorningSchedule`, `ScheduledSession`, and stateless `ScheduleRules`. The caller supplies local date/time, so tests do not depend on the system clock. Active windows are `[start, end)`; `nextSession` excludes any start at or before now. Empty weekdays return no session. Date calculations use `java.time`, with Android core library desugaring enabled for minimum API 24 compatibility.
+
+**Regression check:** all thirty-nine native tests passed (twenty-one schedule tests plus the existing eighteen blocker tests), with zero failures/errors/skips. `:app:lintDebug` completed with zero errors and sixteen warnings concerning existing resources/manifest configuration and a test-dependency update notice; none refer to the scheduling sources. `:app:assembleDebug` passed for ARM64, including core-library desugaring. No JavaScript behavior changed, so the JavaScript suite was not rerun for this native-only subtask.
+
+Persistence, package selection storage, active-session policy freezing, enforcement integration, clock/time-zone/DST recovery, and device validation remain separate work. This subtask makes no claim that real-device blocking is reliable or schedule-driven.
+
+## Phase 2, subtask 2 — DataStore configuration persistence (2026-10-30)
+
+Cases announced before implementation and covered by twenty-one new tests:
+
+- Fresh-install unconfigured state; complete schedule/package round trip; closing and reopening a real temporary store; seconds/nanoseconds retained exactly.
+- Empty weekdays/packages; complete replacement of previous selections; defensive copying; malformed package identifiers rejected.
+- Observable complete policy updates; concurrent saves retaining a whole policy rather than mixed fields.
+- Partial records, invalid times, overnight windows, unknown weekdays, invalid packages, and wrong preference types reported as corruption.
+- Future schema rejected for reads and writes; corrupt file bytes preserved; read/write IO failures propagated.
+- Android context wrappers sharing one application-level DataStore instance.
+
+**Red:** the twenty repository tests ran against compileable stubs; nineteen failed, with only the fresh-install case passing. The additional Android factory test failed at its unimplemented factory stub after correcting a test API signature. The observer test timed out waiting for updates and the concurrent-save test hit its missing saved policy; other failures established absent validation, persistence, and error reporting.
+
+**Green:** implemented immutable `BlockingPolicy`, `PolicyRepository` using Preferences DataStore 1.2.1, and an application-context factory using a file-scope `preferencesDataStore` delegate. Reads expose a nullable policy and a flow. Writes replace all policy fields transactionally after validating existing schema/data. Schema 1 persists ISO local times, weekday names, and package names. No corruption replacement handler is installed and IO failures are not swallowed. Unknown schema versions cannot be overwritten by ordinary saves. Coroutines 1.10.2 are explicitly declared.
+
+**Test runtime finding:** the first implementation run passed fifty-seven of sixty tests, but repeated writes failed on Windows when the Android DataStore artifact ran with stub Android APIs outside Robolectric. Running repository tests under Robolectric API 34 (still using actual temporary disk files and real DataStore instances) resolved all three file-replacement failures without a production workaround.
+
+**Regression result:** all sixty native tests passed: twenty repository tests, one Android store-factory test, twenty-one schedule-rule tests, and eighteen blocker tests. No failures/errors/skips. `:app:lintDebug` completed with zero errors and eighteen warnings (existing manifest/resources plus dependency update notices). `:app:assembleDebug` passed for ARM64. No JavaScript behavior changed, so the JavaScript suite was not rerun for this native-only subtask.
+
+The configuration repository remains independent of the service and JavaScript bridge. Active-session freezing, pending edits, recovery, overrides, and physical-device enforcement validation are not implemented by this subtask. Saved package names are not assumed to be installed. Explicit storage repair/migration and UI error presentation remain future work.
+
+## Phase 2, subtask 3 — active-session policy protection (2026-10-30)
+
+Cases explained before implementation:
+
+- Unconfigured and pre-window states; exact start/end boundaries; late first evaluation retaining the original scheduled start.
+- Earlier/later end edits, app removal, clearing selected days/apps, and edits exactly at start or before any session evaluation preserving the original session.
+- Pre-session edits applying that morning; latest repeated edit and weekday changes applying on the next eligible date.
+- No second same-day session after an edit, including when the original window elapsed without being observed.
+- Frozen policy and pending edits surviving DataStore close/reopen; concurrent edit/evaluation preserving one original policy.
+- Partial saved session and storage failures surfacing as errors rather than clearing protection.
+- First-time setup inside its active window starting immediately on evaluation (provisional assumption, raised with the user asynchronously).
+
+**Red:** the first twenty session tests executed against a null-returning session stub; fifteen failed. Added two tests for first-time in-window setup and an elapsed unobserved window before implementation. The second red run executed twenty-two tests with seventeen failures; five inactive cases already passed. Existing persistence tests were adapted to pass explicit pre-window timestamps through the new save API.
+
+**Green:** added immutable `RestrictionSession` and optional schema-1 session metadata. `save(policy, now)` captures the old policy and stores a later effective date for edits once a session has begun. `activeSessionAt(now)` captures/returns the frozen session transactionally. Expired snapshots remain as a same-date guard; new eligible dates can capture the latest policy. Read-only configuration APIs return the latest configured/pending policy and are explicitly documented as unsuitable for direct enforcement. Shared policy encoding/validation is reused for configuration and snapshots. Existing configuration-only records remain compatible.
+
+**Verification:** all eighty-two native tests passed: twenty-two session tests plus the previous sixty. Zero failures/errors/skips. Android lint completed with zero errors and eighteen warnings; the ARM64 debug build passed. No JavaScript changes; the JavaScript suite was not rerun.
+
+No service, alarm, boot receiver, JavaScript bridge, emergency override, or history integration is included. Device validation and wall-clock/time-zone/DST recovery remain pending. The immediate-first-setup behavior is a stated provisional choice, not a user approval or a completed UI decision.
+
+## Recovery, subtask 1 — zone-aware deadlines and clock model (2026-10-30)
+
+Announced a separate clock-model/reader commit before DataStore integration. Asked the user about active-session behavior during clock changes; preserving duration is a stated provisional assumption while feedback is pending.
+
+Twenty-nine new tests cover:
+
+- Nine zone-resolution cases: India half-hour offset, ordinary New York date, shortened elapsed duration across spring DST, nonexistent start/both boundaries, collapsed/inverted windows, the repeated autumn hour, and future zone changes without mutating a previously resolved window.
+- Seventeen recovery cases: original deadline, late start, pre-start rejection, exact end, process-restart checkpoint, forward/backward wall changes, zone changes, sleep, new boot fallback, rollback cap, completion after reboot, sticky completion, regressing elapsed time, re-anchored reboot fallback, invalid readings/state, and submillisecond precision.
+- Three Android-reader cases: wall/elapsed/boot/zone sample, zone reread per sample, and missing boot identity error. The reader uses the application context.
+
+**Red:** twenty-eight tests executed against null/throwing stubs; twenty-six failed, with only the two skipped-window cases passing. Added the invalid-checkpoint test before implementation and ran the seventeen recovery tests; all failed. No production behavior was implemented before those failures.
+
+**Green:** implemented immutable clock readings/windows/checkpoints, DST-aware instant resolution, monotonic same-boot recovery, capped absolute-deadline recovery after reboot, and sticky completion. Observed wall-clock changes re-anchor the reboot fallback while retaining the original scheduled window. The Android adapter reads SystemClock.elapsedRealtime and Settings.Global.BOOT_COUNT, failing explicitly when boot identity is unavailable. No dependency or permission additions.
+
+**Verification:** the full native suite passed all 111 tests, including the previous 82, after the application-context refactor. Lint completed with zero errors and eighteen warnings; the ARM64 debug build passed. JavaScript was unchanged and its suite was not rerun.
+
+Clock checkpoints are not serialized or wired into PolicyRepository yet; the old LocalDateTime repository behavior remains. Process restart/reboot tests exercise model inputs, not an actual device restart. See CLOCK_RECOVERY.md for the next storage-integration subtask and the offline-time limitations. No boot receiver or live enforcement changes are included.
+
+## Recovery, subtask 2 — atomic persisted clock checkpoints (2026-10-30)
+
+Announced and implemented separately after committing the pure clock foundation. Fifteen new DataStore tests cover actual file reopen after forward/backward clock changes; zone changes across dates; persistent completion after rollback; simulated reboot before/after expiry; saved fallback after an observed wall jump; edits during rollback; missing/invalid metadata; elapsed regression without data loss; concurrent recovery/edit; one-time legacy anchoring; and spring/autumn DST boundaries.
+
+**Red:** fifteen tests ran against adapters that only converted ClockReading back to the old LocalDateTime API. Thirteen failed. Strengthened the reboot test to verify the saved boot identity and the autumn test to sample between the two occurrences; all fifteen failed before production recovery integration.
+
+**Green:** removed the production local-timestamp overloads. Native mutations/evaluation now require ClockReading, recover active clocks before considering new dates, and persist complete clock metadata with the frozen policy in a single DataStore edit. Completed markers remain terminal for that session. Pending edits are deferred even when a clock/zone change moves the local date backward. Existing local-rule tests use test-only UTC clock adapters that advance wall and elapsed time together. Legacy snapshots without clock metadata are anchored once using the supplied zone; malformed/partial groups remain errors. No dependency or permission additions.
+
+**Verification:** all 126 native tests passed, including the previous 111, with zero failures/errors/skips. Lint completed with zero errors and eighteen warnings, and the ARM64 debug build passed. JavaScript behavior and bridge are unchanged; no JavaScript suite rerun.
+
+Recovery is lazy on native repository calls; no boot receiver, time-change receiver, alarm rescheduling, or live AccessibilityService wiring is included. Samsung validation and the provisional clock-policy decision remain open. Offline clock manipulation across an unobserved reboot cannot be fully trusted; see CLOCK_RECOVERY.md.
+
+## Confirmed change — morning sessions follow local hours (2026-10-30)
+
+The user chose simple current-local-hours behavior rather than duration preservation, and confirmed immediate first-time setup inside the window. Announced clock-forward/backward, zone-change, reopen, frozen-policy, DST, and legacy-checkpoint cases before changing implementation.
+
+**Red:** updated the fifteen repository clock cases and the Android-reader missing-boot case before production changes. Eighteen targeted tests ran, with fifteen failures against the old implementation. Replaced continuous DST-window expectations with direct local-hour comparisons. Removed seventeen obsolete duration-state tests because that behavior was explicitly rejected by the user.
+
+**Green/refactor:** ClockReading now contains only instant and zone. Removed SessionClockState, monotonic morning recovery, absolute fallback checkpoints, boot-count reads, and sticky expiry. Native evaluation follows current local weekdays/hours using the frozen policy; rollback can re-enter the same window without applying pending edits. Obsolete `clock_*` fields are ignored and lazily removed while retaining policy/session data. Shared schedule rules remain authoritative for inclusive start/exclusive end. Emergency timers are not implemented or changed; their future monotonic requirement remains.
+
+**Verification:** all 106 native tests passed after the behavior change and final refactor, with zero failures/errors/skips. The lower count reflects retirement of seventeen duration tests and consolidation of nine zone-resolution tests into six local-clock cases. Lint completed with zero errors and eighteen warnings, and the ARM64 debug build passed. JavaScript is unchanged and its suite was not rerun.
+
+Updated AGENTS.md, product specification, README, and clock behavior notes to record both decisions and the accepted manual-clock bypass. Live service/broadcast wiring and physical Samsung tests remain pending.
+
+## Emergency access, subtask 1 — independent state machine (2026-10-30)
+
+Announced thirty-three cases before implementing behavior: active/inactive states; fixed 60-second wait; exact readiness and explicit confirmation; early/unsolicited confirmation; five minutes from confirmation; cancellation in wait/ready; idempotent requests/confirmation; exact expiry; one-use limit; cap at morning end and later cap reduction; no extension after the morning bound grows; window exit/re-entry; same-boot restored-state deadlines; reboot during wait/ready/access; a genuine new session; elapsed regression; canceling granted access; deadline overflow; and invalid inputs/state.
+
+**Red:** all thirty-three tests ran against compileable stubs; twenty-nine failed. Strengthened three positive setup assertions before implementation (ready/used state), then reran: thirty-two failed, with only the basic blocking default passing.
+
+**Green:** implemented immutable OverrideClock, EmergencyContext, EmergencyState, phases, and pure advance/request/confirm/cancel functions. Wait and access deadlines are monotonic and fixed. Confirmation consumes the allowance; cancellation of a pending request does not. A boot change clears timers without clearing completed usage. Leaving the morning window clears timers and retains usage for re-entry. Duplicate commands cannot extend deadlines. No clock is read implicitly and no JavaScript timer is involved.
+
+**Additional red/green:** after the first implementation passed all 139 native tests, added two saved-state deadline-bound tests. Both failed before validation was added. Shared maximum durations now validate saved metadata; boot recovery clears stale timers atomically before adopting the new boot clock. Both new cases passed.
+
+**Verification:** all 141 native tests passed (35 emergency + previous 106), with zero failures/errors/skips. Android lint completed with zero errors and eighteen warnings; the ARM64 debug build passed. No JavaScript, permissions, dependency, or live enforcement changes; no JavaScript suite rerun.
+
+This is the rules-only subtask. Restored-state tests copy immutable model objects and supply simulated elapsed/boot inputs, not actual file or process recovery. Native monotonic-clock reading, DataStore persistence/concurrency, UI/bridge, service integration, and physical-device tests remain separate work. See EMERGENCY_ACCESS.md for the storage contract.
+
+## Emergency access, subtask 2 — DataStore and native monotonic reader (2026-10-30)
+
+Announced persistence/reopen, boot recovery, concurrent commands, invalid/failed storage, and reader cases before implementation. Added 31 tests: 25 real DataStore/transaction cases, five Android clock-reader cases, and one application-store factory case.
+
+Cases include request/readiness/access restoration without extending deadlines; cancellation/retry; simulated reboot during pending, ready, and active states; persistent consumption when revisiting an older session ID; concurrent requests/confirmations; morning-window cancellation/capping; missing/invalid state or usage ledger; future schema and malformed protobuf retention; IO/context failures; failed confirmation writes; elapsed regression; and committing reboot cancellation even when confirmation is rejected. Reader tests verify elapsed realtime, controlled advancement, reread boot identity, and missing/negative boot-count errors.
+
+**Red:** all 31 new tests executed against compileable stubs; 27 failed. Strengthened three positive stored-wait assertions before implementation and reran: 30 failed, with only the fresh unused state case passing.
+
+**Green:** added EmergencyRepository with context sampling, state advance, command, and consumed-session set in one DataStore transaction. An append-only used-ID set preserves the allowance limit across session changes/reopen. Business-command rejections are thrown after required normalization is committed; other failures propagate without resetting state. Added the application-level Preferences DataStore factory and AndroidOverrideClock using elapsedRealtime plus BOOT_COUNT, failing on unavailable identity. No dependency, permission, JavaScript, or live enforcement changes.
+
+**Verification:** all 172 native tests passed (31 new + previous 141), with zero failures/errors/skips, including the strengthened old-session reuse case that closes/reopens the file before revisiting the consumed ID. Android lint completed with zero errors and eighteen warnings; the ARM64 debug build passed. No JavaScript suite rerun because JavaScript is unchanged.
+
+Actual device process termination/reboot/sleep remain untested. The native context provider is injected and not yet wired to the policy repository or live service/UI. State is recovered lazily on commands/status, not by a boot receiver. Morning local-hour behavior is unchanged. See EMERGENCY_ACCESS.md for API/transaction semantics and remaining integration.
+
+## Progress handoff (2026-11-18)
+
+Documentation-only subtask: added HANDOFF.md and a README link. Inspected the code/document inventory, working tree, commit baseline, local branch tracking, and existing APK metadata. Separated implemented independent logic from installed prototype behavior and ordered the remaining tasks behind physical Phase 1 validation. Verification figures are explicitly attributed to the 2026-11-05 preflight, not claimed as new results. Checked relative document links and Git whitespace. No application behavior changed; red/green tests and application suite reruns are not applicable to this documentation update.
+
+## Fresh standalone build for physical testing (2026-11-18)
+
+User requested a fresh APK before phone validation. No application behavior changed, so a failing behavior test/red phase is not applicable. Verification covers the existing native and setup behavior, static checks, a clean app release rebuild, and APK signature verification; physical interruption remains untested.
+
+Built from clean tracked source at `808e1d1` (application code baseline `ed265d4`) using checksum-verified temporary Node 22.23.4, JDK 17, Android SDK/Build Tools 36, and ARM64. The default Node 22.12.0 was not used and no system runtime configuration was changed. SDK/runtime discovery required access outside the workspace sandbox.
+
+**Green:** `:app:clean :app:testDebugUnitTest :app:assembleRelease -PreactNativeArchitectures=arm64-v8a` succeeded in 4m 15s, including bundled JavaScript and release vital lint. All 172 native tests passed with zero failures, errors, or skips. Direct Node Jest invocation with `--runInBand --watchman=false` passed all nine tests; TypeScript passed; ESLint on tracked JS/TS/TSX files reported zero errors and one warning for explicitly passing ignored `.prettierrc.js`. Existing Kotlin deprecation/parameter-name and Gradle deprecation warnings remain.
+
+**Artifact:** `android/app/build/outputs/apk/release/app-release.apk`, 18,182,210 bytes, built 2026-11-18 at 03:12:18 local time (Asia/Calcutta). SHA-256: `42f4edefe353a9eb1f02cf3dd5aa47eddb4b795f7caa28fa3e60fc81e6e683b6`. Build Tools 36 `apksigner verify --verbose --print-certs` passed with APK Signature Scheme v2 and the existing Android debug certificate. This remains a standalone local-test build, version 1.0/versionCode 1, with Instagram-only continuous enforcement.
+
+ADB started successfully but `devices -l` listed no devices. No installation, device interaction, or physical reliability result is claimed. Follow PHASE_1_TESTING.md after connecting the phone. Raw Gradle output is retained locally at `android/build/physical-preflight-2026-11-18.log` (ignored build artifact).
+
+## Initial user-reported phone checks (2026-11-18)
+
+The user reported that Instagram was blocked after installing the supplied standalone APK, then reported that the five requested manual-check groups worked: exit/unrelated apps, repeated launcher/recents entry, dismissal of the blocker UI, offline/lock-unlock behavior, and accessibility revocation/re-enabling. Recorded the scope and evidence limitations in PHASE_1_TESTING.md and updated the handoff. Exact attempt counts/device versions, optional notification entry, detailed matrix assertions, and broader lifecycle/multi-window cases remain unconfirmed. Full physical validation and the integration gate remain open.
+
+Documentation-only subtask; no behavior change or red/green cycle applies. Validation: reviewed the report against the conversation and checked Git whitespace. Application tests were not rerun; the immediately preceding build entry retains the automated results. User explicitly requested a new commit and a push to `main`; remote inspection found only `dev`, which remains the default. Publishing the current development history to a new `main` branch does not change that default.
+
+## User acceptance of Phase 1 for continued development (2026-11-18)
+
+The user explicitly instructed: "we can mark physical testing as done for now. lets proceed with whatever is next". Recorded Phase 1 development-gate acceptance and authorization for native scheduling integration in AGENTS.md, PHASE_1_TESTING.md and HANDOFF.md. The unconfirmed device cases remain deferred reliability work, not passing results. Documentation-only subtask: no red/green behavior change; checked Git whitespace and consistency with the user instruction. No application checks rerun for this acceptance record.
+
+## Scheduling integration, subtask 1 — native restriction decisions (2026-11-18)
+
+Announced tests for a repository-backed native evaluator before development: unconfigured/disabled schedules, exact boundaries with the same foreground app, immediate in-window setup, selected supported/future packages, Settings/self exemptions, unknown foreground, frozen packages/end times despite pending edits, next eligible session, actual DataStore file reopening, clock exit/re-entry, time-zone changes, and IO/corruption/clock/cancellation failures.
+
+**Red:** added 17 RestrictionEngine tests and a compileable always-inactive evaluator stub. All 17 executed; 15 failed and two inactive cases passed. The run failed on behavior assertions, not compilation. Raw output: `android/build/restriction-engine-red.log` (ignored).
+
+**Green:** RestrictionEngine now samples fresh native local time per evaluation and calls only `PolicyRepository.activeSessionAt`, never latest/pending configuration. Decisions distinguish inactive, active-but-allowed, selected-and-blocked (with the frozen session/end time), and unknown foreground. Inactive decisions can release an expired restriction even if the foreground snapshot is missing; unknown foreground inside an active session must not dismiss an existing overlay. Settings and Morning Blocker stay accessible even if accidentally selected. Failures propagate for future service status reporting, and cancellation is not swallowed. No cached policy or JavaScript authorization is introduced.
+
+**Verification:** all 189 native tests passed (17 new plus 172 previous), zero failures/errors/skips. `:app:testDebugUnitTest :app:lintDebug :app:assembleDebug -PreactNativeArchitectures=arm64-v8a` passed. Android debug lint retained 18 warnings and zero errors. Windows native-library hard links across C:/E: fell back successfully to copying. Node 22.23.4/JDK 17 were selected for the build. JavaScript is unchanged, so its tests/static checks were not rerun. Green output: `android/build/restriction-engine-green.log` (ignored).
+
+This completes the native decision adapter only. The AccessibilityService and ForegroundGate still use continuous Instagram prototype enforcement; wiring asynchronous decisions, start/end reevaluation with an already-foreground app, native errors, lifecycle/clock recovery and dynamic overlay details is the next integration subtask. No new standalone APK was produced; the phone's installed APK remains unchanged. Configuration bridge/UI and emergency integration remain later work. No physical scheduling results are claimed.
+
+## Scheduling integration, subtask 2 — service and overlay (2026-11-18)
+
+Before implementation, announced tests for selected-package enforcement, inactive/unconfigured schedules, start/end with an already-foreground app and no React context, local clock/zone changes, unknown/failing foreground reads, storage failures, repeated events, and shutdown. Expanded this to asynchronous cancellation, reconnection, navigation and expiry races, plus actual app/unlock-time presentation. Updated the disclosure expectation before changing UI wording.
+
+**Red:** with compileable unused service hooks and an unresolved gate stub, 41 targeted native tests executed; 32 failed against the old continuous prototype and unchanged overlay text. The setup-screen suite also ran red: one disclosure test failed, four passed. Failures demonstrated incorrect scheduled behavior/metadata and obsolete continuous-blocking copy. Native log: `android/build/scheduled-service-red.log` (ignored).
+
+**Green:** AppMonitorService now reads the shared persisted effective session through RestrictionEngine on Dispatchers.IO. Window reads, overlay changes and status updates remain on the main looper through a Handler dispatcher. Only one policy evaluation runs per connection at a time. Native callbacks continue while inactive, nominally every second, and run every 250 ms while blocking; unresolved observations get bounded fast retries before the normal cadence resumes. Each evaluation samples current local time/zone; no JavaScript runtime authorizes enforcement. Empty configuration no longer falls back to continuous Instagram blocking.
+
+ForegroundGate consumes typed inactive/allowed/blocked/unknown decisions and deduplicates equivalent presentation. Unknown active windows retain an existing overlay, while expiry releases it even if foreground detection fails or a policy read is suspended. Late responses are checked against current foreground/session time. Generation guards and scope cancellation prevent results from disconnected services affecting a new connection. Cleanup removes only the timer so coroutine cancellation continuations can finish. IO/corruption/clock failures report native unavailability and retry, without erasing independent Home/settings errors.
+
+BlockController now shows Instagram/YouTube/Reddit (or a future package identifier) and the frozen session's localized unlock time, updating one existing overlay when details change. Settings/Home exits and system-navigation window flags are retained. Setup/accessibility disclosures now describe saved schedules and explicitly say configuration UI and emergency access are unavailable. No permission, dependency, manifest receiver, exact alarm or wake-lock changes were introduced.
+
+**Additional red/green:** after 212 tests first passed, review identified two races. Added tests for unrelated-app departure during suspended IO and rapidly alternating foreground snapshots; both failed before fixes. The service now uses the already displayed frozen selection to uncover unrelated apps promptly, and stale snapshots use bounded backoff rather than a zero-delay busy loop. Real-repository service tests also exercise the production IO dispatcher, confirm off-main reads/main-thread presentation and verify pending edits cannot replace the active selection. The 9 old continuous-service tests and 6 old hardcoded-gate tests were replaced by 28 scheduled-service and 8 scheduled-gate tests that preserve applicable recovery/navigation/cleanup coverage; four presentation/disclosure tests were added. Native total: 214.
+
+**Verification:** all 214 native tests and all 9 Jest tests passed. TypeScript and ESLint on tracked JS/TS/TSX files passed (zero ESLint errors, existing ignored `.prettierrc.js` warning). `:app:testDebugUnitTest :app:lintDebug :app:assembleDebug -PreactNativeArchitectures=arm64-v8a` passed with Node 22.23.4/JDK 17; debug lint retained zero errors/18 warnings. Git whitespace checked. Native logs include `scheduled-service-races-red.log` and `scheduled-service-final.log` under ignored `android/build/`.
+
+Official Android Handler and AccessibilityService documentation was reviewed: uptime-based callbacks are delayed by deep sleep, and service binding is system managed. See CLOCK_RECOVERY.md for links and limitations. Nominal callback intervals are not delivery/latency guarantees. No actual scheduled device, sleep, process-death, reboot or force-stop results are claimed. The installed continuous-prototype APK remains unchanged; no new standalone release was built. Next subtask is validated configuration bridging and minimal selection/schedule UI before a new phone-test build. Broader dashboard, emergency context/integration and history remain later work.
+
+## Configuration, subtask 1 — atomic editable/effective views (2026-11-18)
+
+Announced atomic configuration read/save cases before development: absent/disabled policy, pre-window save, immediate first in-window setup, frozen session versus pending edits, completed-window deferral, next-day activation, real-file reopening, concurrent saves, corruption retention and IO failures. Added 11 repository tests with empty-view stubs. Corrected one invalid concurrency fixture before the final red run: 11 executed, 10 failed on missing behavior, one unconfigured case passed (`android/build/configuration-red.log`).
+
+**Green:** added PolicyConfiguration snapshots with editable policy, active frozen session, effective date and native deferral flag. Reads capture/recover the session atomically; saves return their own committed view, including immediate first setup, without separate read races. Existing save/activeSessionAt APIs reuse this implementation. Legacy policy metadata remains compatible, and failures do not silently replace configuration. All 225 native tests passed (214 previous plus 11 new), zero failures/errors/skips (`configuration-green.log`). No UI/bridge behavior changed yet; those checks follow in subsequent subtasks. Git whitespace checked. User authorized continuing through a standalone phone-test build; no push requested.
+
+## Configuration, subtask 2 — validated native bridge (2026-11-18)
+
+Announced supported-package/time/weekday validation, native-only time, errors, editable-versus-effective serialization and typed JavaScript forwarding before development. **Red:** 12 native access/codec tests executed against stubs, 8 failed; all 3 new JS forwarding/error tests failed (4 existing bridge tests passed). Native output: `android/build/bridge-red.log`.
+
+**Green:** added the shared supported-app catalog, strict ReadableMap decoder (24-hour HH:mm, same-day window, unique ISO weekdays 1–7 and supported packages only), and plain-value snapshot serializer. Empty selections are explicit disabled policies; extra fields including caller timestamps are rejected before clock sampling or storage. Native access samples a fresh AndroidSessionClock after validation and uses atomic repository operations. BlockingModule exposes asynchronous get/save promises on an IO scope, cancels on invalidation, and returns validation/storage errors without resetting policy. JNI output uses Arguments.makeNativeMap; installed RN 0.84.1 Arguments/BaseJavaModule source was checked. JS wrappers forward native snapshots and errors without adding authorization timestamps. Overlay labels reuse the native catalog.
+
+All 237 native tests passed (225 previous plus 12 new), all 12 Jest tests passed, TypeScript passed, and ARM64 debug assembly passed (`bridge-green.log`). New TS code/tests formatted and Git whitespace checked. Unit tests cover plain serialization/ReadableMap decoding and real DataStore access; actual JNI bridge/device behavior remains part of the upcoming APK installation test. Configuration UI is the next subtask; no standalone release or push yet.
+
+## Configuration, subtask 3 — selection and schedule UI (2026-11-18)
+
+Announced UI cases before development: no automatic default save, supported-app/ISO-weekday selection, 24-hour fields, persistence/reopening, distinct editable and effective policies, disabled selections, failed read/save handling, native deferral messages, refresh without losing unsaved edits, stale response rejection, duplicate-save protection, and no background/unmounted UI polling.
+
+**Red:** rendered App with 12 new integration tests before adding controls; 11 failed and the no-background-polling case passed (`android/build/schedule-ui-red.log`). Implemented a single-screen ScheduleSettings panel beneath permission/status controls, using the typed native bridge. Early green verification required fixing two test-harness assumptions: React Native's memoized Pressable must be located by accessible role/label, and pending native calls must not be awaited by the test's press helper. Behavior assertions were retained.
+
+**Green:** editable app/day checkboxes and HH:mm inputs explicitly save through Kotlin. Fresh installs block nothing until saved. Native active-session/deferral information is displayed separately from editable configuration; invalid times are rejected locally and also remain validated natively. Read failures disable saving unknown state; save failures preserve the draft and never show success. Native UI state refreshes on return and every five seconds while active without authorizing enforcement or overwriting unsaved edits. Request sequencing rejects old responses; a synchronous ref prevents duplicate saves/reads during a pending write. Timer/subscription cleanup and mounted guards cover UI closure. Native blocking remains independent of these UI timers. ScrollView allows handled button taps with the keyboard open; screen layout itself awaits phone verification.
+
+**Additional red/green:** added one rapid double-toggle case after the first 24 tests passed. It failed because stale render closures could duplicate packages/remove a day twice. App/day updates now derive membership from the latest functional state; all 25 Jest tests pass (13 new plus 12 previous). TypeScript and ESLint pass with zero errors (existing ignored `.prettierrc.js` warning); TS/TSX files formatted and Git whitespace checked. Native code is unchanged since the previous passing 237-test run. Prepared Android metadata versionCode 2/versionName `1.1-scheduling` (static configuration change) to distinguish the upcoming APK. Full native checks/release assembly and artifact verification follow as the next subtask before phone installation.
+
+## Scheduling APK ready for installation (2026-11-18)
+
+User requested continued work until the next phone-installation checkpoint. Application source is committed at `cd6a27c8cdb2cc6d374674073b0dda5c23a9bdc8` (configuration repository `66480ed`, native bridge `042f2d9`, UI/version `cd6a27c`, following service integration `ff68be2`). No application code changed after this build; subsequent changes document the artifact and phone test.
+
+**Preflight:** using Node 22.23.4/JDK 17/SDK and Build Tools 36, `:app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleRelease -PreactNativeArchitectures=arm64-v8a` passed in 2m 1s. All 237 native tests passed with zero failures/errors/skips; the latest JS run passed all 25 tests. TypeScript and ESLint passed (zero errors, existing ignored `.prettierrc.js` warning); debug lint retained zero errors/18 warnings and release vital checks passed. Bundling waited 12.5s for Watchman, then completed normally. Log: ignored `android/build/scheduling-release-preflight.log`. This packaging/documentation subtask changes no application behavior, so no additional failing behavior test applies.
+
+**Verified artifact:** `android/app/build/outputs/apk/release/morning-blocker-1.1-scheduling-arm64.apk`, copied from `app-release.apk`; 18,242,834 bytes, built 2026-11-18 at 15:49:52 local time (Asia/Calcutta). SHA-256 `e0f88e16afcde582a5e308871e2963883a4ab14ab066ee1c0455e68690e4bcb2`. AAPT confirms package `com.morningblocker`, versionCode 2/versionName `1.1-scheduling`, ARM64, min SDK 24 and target SDK 36. Apksigner verification passed with APK Signature Scheme v2; certificate SHA-256 matches the previous APK: `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c` (existing public Android debug key, local testing only).
+
+ZIP inspection verified nonempty DEX, bundled JavaScript (1,134,524 bytes), React Native/app-module libraries and Hermes VM. The JS bundle contains the new Save schedule/get/save configuration markers. The first archive check expected the old `libhermes.so` filename; inspection showed this RN version ships `libhermesvm.so`, and the corrected check passed. This was a verification-script assumption, not a missing library or app change.
+
+Added SCHEDULING_TESTING.md with direct-transfer installation (no USB/Metro required), a short future window, persistence, start/end with Instagram already foreground, offline/UI dismissal, and frozen-edit checks. Updated README/HANDOFF/Phase 1 notes to distinguish the ready scheduled APK from the old installed continuous prototype. Reviewed official Android versioning/signing sources linked in the guide; verified matching local certificate and increased version code, without claiming an actual device update. Checked relative Markdown links and Git whitespace. No APK is committed to Git, no push performed, and no installation/device test claimed. Stop here for user installation and observed results; emergency access, history and broader device reliability remain later work.
